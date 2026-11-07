@@ -1,0 +1,22 @@
+# HTTPS для сервера: Caddy принимает 80/443, сам получает сертификат Let's Encrypt
+# для DOMAIN (адрес вида 34-88-153-35.sslip.io) и проксирует на приложение внутри сети compose.
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    profiles: ["prod"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

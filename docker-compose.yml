@@ -1,0 +1,52 @@
+# MGIMO Hub: кабинет студента и деканата
+#
+# Разработка:   docker compose up -d db        (только база на localhost:5433)
+# Продакшн:     docker compose --profile prod up -d --build
+#               (поднимет базу + приложение на :3000, применит миграции и заполнит демо-данными)
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-attache}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-attache_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-attache}
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-attache} -d ${POSTGRES_DB:-attache}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  app:
+    profiles: ["prod"]
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-attache}:${POSTGRES_PASSWORD:-attache_dev_password}@db:5432/${POSTGRES_DB:-attache}
+      AI_PROVIDER: ${AI_PROVIDER:-bedrock}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-deepseek.v3.2}
+      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      SEED_ON_START: ${SEED_ON_START:-if-empty}
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:office@mgimo-hub.local}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+
+volumes:
+  pgdata:

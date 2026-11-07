@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>MGIMO Hub: как мы собрали цифровой деканат с ИИ-агентами</title>
+<style>
+  @font-face { font-family: "Geist"; src: url("fonts/geist-cyrillic-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: "Geist"; src: url("fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono-cyrillic-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+
+  :root {
+    --ink: #0a0a0a; --ink-2: #3d3d3d; --ink-3: #6b6b6b; --line: #e3e3e3; --soft: #f5f5f5; --soft-2: #ededed;
+    --brand: #2f54eb; --brand-soft: #eef2fe; --ok: #17803d; --warn: #b45309; --bad: #d92d20;
+  }
+  @page { size: A4; margin: 15mm 15mm 17mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Geist", system-ui, sans-serif; font-size: 10pt; line-height: 1.55; color: var(--ink); font-feature-settings: "ss01"; }
+  .mono, code { font-family: "Geist Mono", ui-monospace, monospace; }
+  code { font-size: 0.88em; background: var(--soft); border-radius: 4px; padding: 0.05em 0.35em; }
+  p { margin: 0 0 8pt; text-wrap: pretty; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+  a { color: var(--brand); text-decoration: none; }
+  ul { margin: 0 0 8pt; padding-left: 14pt; }
+  li { margin-bottom: 3pt; }
+  strong { font-weight: 600; }
+
+  /* ── обложка ── */
+  .cover { height: 262mm; display: flex; flex-direction: column; justify-content: space-between; background: #0a0a0a; color: #ededed; overflow: hidden; position: relative; padding: 18mm 16mm 14mm; border-radius: 14px; page-break-after: always; }
+  .cover .bg { position: absolute; inset: 0; background: url("img/cover-ink.jpg") center / cover no-repeat; opacity: 0.55; }
+  .cover .bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,10,10,0.15) 0%, rgba(10,10,10,0.92) 55%); }
+  .cover > * { position: relative; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 15pt; letter-spacing: -0.03em; }
+  .mark { width: 30px; height: 30px; border-radius: 8px; background: #ededed; color: #0a0a0a; display: grid; place-items: center; font-weight: 700; font-size: 15pt; }
+  .brand b { font-weight: 650; } .brand span { color: #a3a3a3; }
+  .cover h1 { font-size: 34pt; line-height: 1.04; letter-spacing: -0.045em; font-weight: 650; max-width: 125mm; margin-left: auto; }
+  .cover .lead { font-size: 12.5pt; color: #b5b5b5; max-width: 125mm; margin: 6mm 0 0 auto; line-height: 1.45; }
+  .cover .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid #2a2a2a; padding-top: 6mm; }
+  .cover .facts div { padding-right: 4mm; }
+  .cover .facts b { display: block; font-size: 20pt; font-weight: 650; letter-spacing: -0.03em; color: #fff; }
+  .cover .facts span { font-size: 8.5pt; color: #8a8a8a; }
+  .cover .link { margin-top: 6mm; display: flex; justify-content: space-between; font-size: 9pt; color: #9a9a9a; }
+  .cover .link a { color: #9db1ff; font-family: "Geist Mono"; }
+
+  /* ── разделы ── */
+  section { page-break-before: always; }
+  section.flow { page-break-before: auto; margin-top: 10mm; }
+  .eyebrow { font-family: "Geist Mono"; font-size: 8.5pt; color: var(--brand); letter-spacing: 0.02em; margin-bottom: 2mm; }
+  h2 { font-size: 21pt; line-height: 1.12; font-weight: 650; margin-bottom: 3mm; }
+  h3 { font-size: 12pt; font-weight: 620; margin: 6mm 0 2.5mm; }
+  .intro { font-size: 11pt; color: var(--ink-2); max-width: 165mm; margin-bottom: 6mm; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 8.5pt; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 4mm 4.5mm; break-inside: avoid; }
+  .card h4 { margin: 0 0 1.5mm; font-size: 10.5pt; font-weight: 620; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 9pt; }
+  .stat b { display: block; font-size: 19pt; font-weight: 650; letter-spacing: -0.03em; line-height: 1.1; }
+  .stat span { font-size: 8.5pt; color: var(--ink-3); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 2mm 0 5mm; break-inside: auto; }
+  th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 8pt; border-bottom: 1px solid var(--line); padding: 2mm 2.5mm; }
+  td { border-bottom: 1px solid var(--line); padding: 1.9mm 2.5mm; vertical-align: top; }
+  tr { break-inside: avoid; }
+  td:first-child { font-weight: 560; }
+  .num { font-family: "Geist Mono"; color: var(--ink-3); font-weight: 400 !important; width: 7mm; }
+
+  figure { margin: 0; break-inside: avoid; }
+  figure img { display: block; width: 100%; border-radius: 9px; border: 1px solid var(--line); }
+  figcaption { font-size: 8.3pt; color: var(--ink-3); margin-top: 1.6mm; }
+  .phones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; align-items: start; }
+  .phone img { border-radius: 18px; border: 5px solid #111; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .tag { display: inline-block; font-size: 7.8pt; font-weight: 600; border-radius: 5px; padding: 0.3mm 1.8mm; margin-bottom: 1.5mm; }
+  .tag.bad { color: var(--bad); background: #fdeceb; } .tag.ok { color: var(--ok); background: #edf7f0; } .tag.info { color: var(--brand); background: var(--brand-soft); }
+
+  /* ── промпты ── */
+  .prompt { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 3mm; break-inside: avoid; line-height: 1.45; }
+  .prompt .head { display: flex; justify-content: space-between; align-items: baseline; padding: 2mm 4mm; background: var(--soft); border-bottom: 1px solid var(--line); font-size: 8.5pt; }
+  .prompt .head b { font-size: 9.5pt; font-weight: 620; }
+  .prompt .head span { font-family: "Geist Mono"; color: var(--ink-3); }
+  .prompt .body { display: grid; grid-template-columns: 1.08fr 1fr; }
+  .prompt .say, .prompt .did { padding: 2.5mm 4mm 3mm; font-size: 8.8pt; }
+  .prompt .did li { margin-bottom: 1.2pt; }
+  .prompt .say { border-right: 1px solid var(--line); }
+  .prompt .label { font-size: 7.6pt; font-weight: 600; color: var(--ink-3); text-transform: none; margin-bottom: 1mm; display: block; }
+  .prompt .say p { font-size: 9.3pt; color: var(--ink); margin: 0; }
+  .prompt .say p::before { content: "«"; color: var(--brand); } .prompt .say p::after { content: "»"; color: var(--brand); }
+  .prompt .did ul { margin: 0; padding-left: 12pt; color: var(--ink-2); }
+
+  .brief { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 4mm; break-inside: avoid; overflow: hidden; }
+  .brief .head { padding: 2.5mm 4mm; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 8.5pt; }
+  .brief .head b { font-weight: 620; font-size: 9.5pt; }
+  .brief pre { margin: 0; padding: 3mm 4mm; font-family: "Geist Mono"; font-size: 7.6pt; line-height: 1.5; white-space: pre-wrap; color: var(--ink-2); background: #fafafa; }
+  .brief pre em { font-style: normal; color: var(--brand); font-weight: 600; }
+
+  /* ── схемы ── */
+  .flowline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 3mm 0 6mm; }
+  .step { position: relative; padding: 3.5mm 3.5mm 3.5mm; border: 1px solid var(--line); border-radius: 10px; margin-right: 5mm; background: #fff; }
+  .step:not(:last-child)::after { content: ""; position: absolute; right: -5mm; top: 50%; width: 5mm; height: 1.5px; background: var(--brand); }
+  .step .n { font-family: "Geist Mono"; font-size: 8pt; color: var(--brand); }
+  .step b { display: block; font-size: 9.5pt; font-weight: 620; margin: 0.5mm 0 1mm; }
+  .step p { font-size: 8.2pt; color: var(--ink-3); margin: 0; line-height: 1.4; }
+
+  .arch { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 6mm; align-items: stretch; margin: 2mm 0 5mm; }
+  .arch .col { display: flex; flex-direction: column; gap: 3mm; }
+  .box { border: 1px solid var(--line); border-radius: 10px; padding: 3mm 3.5mm; font-size: 8.6pt; color: var(--ink-2); background: #fff; }
+  .box b { display: block; color: var(--ink); font-size: 9.6pt; font-weight: 620; margin-bottom: 0.8mm; }
+  .box.core { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .box.dark { background: #0a0a0a; color: #b5b5b5; border-color: #0a0a0a; } .box.dark b { color: #fff; }
+  .lane { font-family: "Geist Mono"; font-size: 7.8pt; color: var(--ink-3); margin-bottom: -1mm; }
+
+  .callout { border-left: 3px solid var(--brand); background: var(--brand-soft); border-radius: 0 8px 8px 0; padding: 3mm 4mm; font-size: 9.3pt; margin: 3mm 0 5mm; break-inside: avoid; }
+  .callout b { font-weight: 620; }
+  .toc { columns: 2; column-gap: 10mm; font-size: 10pt; margin-top: 4mm; }
+  .toc div { break-inside: avoid; display: flex; gap: 3mm; padding: 1.6mm 0; border-bottom: 1px solid var(--line); }
+  .toc span { font-family: "Geist Mono"; color: var(--brand); width: 7mm; }
+</style>
+</head>
+<body>
+
+<!-- ═════════════ ОБЛОЖКА ═════════════ -->
+<div class="cover">
+  <div class="bg"></div>
+  <div class="brand"><div class="mark">m</div><b>MGIMO</b><span>Hub</span></div>
+  <div>
+    <h1>Как мы собрали цифровой деканат с командой ИИ-агентов</h1>
+    <p class="lead">Описание процесса для хакатона «Цифровой деканат будущего»: от постановки задачи до работающего кабинета студента и деканата, развёрнутого по ссылке.</p>
+  </div>
+  <div>
+    <div class="facts">
+      <div><b>~16 ч</b><span>от ТЗ до сайта по ссылке, одна сессия</span></div>
+      <div><b>34</b><span>ИИ-агента: 12 разработчиков и исследователей, 22 в оркестрации QA</span></div>
+      <div><b>29 тыс.</b><span>строк TypeScript, весь код написан ИИ</span></div>
+      <div><b>46 + 80</b><span>проверок безопасности и e2e-сценариев</span></div>
+    </div>
+    <div class="link"><span>Прототип: <a href="https://34-88-153-35.sslip.io">https://34-88-153-35.sslip.io</a></span><span>Ноябрь 2026</span></div>
+  </div>
+</div>
+
+<!-- ═════════════ СОДЕРЖАНИЕ ═════════════ -->
+<section style="page-break-before: auto">
+  <div class="eyebrow">Коротко</div>
+  <h2>Что внутри</h2>
+  <p class="intro">MGIMO Hub: личный кабинет студента и рабочее место учебного офиса в одном продукте. Внутри работает ИИ-ассистент «Атташе», который отвечает по данным самого студента и готовит черновики заявок. Весь код, тексты, дизайн-система, тесты и развёртывание сделаны ИИ-агентами. Человек ставил задачи, принимал решения и проверял результат.</p>
+  <div class="toc">
+    <div><span>01</span>Проблема и почему эти разделы</div>
+    <div><span>02</span>Что получилось: кабинет студента и деканата</div>
+    <div><span>03</span>Полный перечень ИИ-инструментов</div>
+    <div><span>04</span>Как была выстроена работа с агентами</div>
+    <div><span>05</span>Ключевые промпты по этапам</div>
+    <div><span>06</span>Задания субагентам и оркестрации</div>
+    <div><span>07</span>Ошибки ИИ и как мы их ловили</div>
+    <div><span>08</span>Удачные и неудачные варианты</div>
+    <div><span>09</span>ИИ внутри продукта: Атташе</div>
+    <div><span>10</span>Вход, данные и защита простыми словами</div>
+    <div><span>11</span>Архитектура</div>
+    <div><span>12</span>Роль автора</div>
+    <div><span>13</span>Как проверить за 5 минут</div>
+  </div>
+
+  <h3>Доступ для жюри</h3>
+  <table>
+    <tr><th>Роль</th><th>Логин</th><th>Пароль</th><th>Что посмотреть</th></tr>
+    <tr><td>Студентка, МО, 3 курс</td><td class="mono">student.anna</td><td class="mono">Demo-Anna-26</td><td>справки, документы с QR, повышенная стипендия под вопросом</td></tr>
+    <tr><td>Студент, МЭО, 2 курс, контракт</td><td class="mono">student.timur</td><td class="mono">Demo-Timur-26</td><td>долг, направление на пересдачу, график оплаты</td></tr>
+    <tr><td>Студентка, ФЛМК, 1 курс</td><td class="mono">student.leyla</td><td class="mono">Demo-Leyla-26</td><td>пустые состояния, кампус Одинцово</td></tr>
+    <tr><td>Студенческий офис, все факультеты</td><td class="mono">staff.office</td><td class="mono">Demo-Office-26</td><td>очередь, заявки, аналитика, пересдачи</td></tr>
+    <tr><td>Учебный офис МЭО</td><td class="mono">staff.meo</td><td class="mono">Demo-Meo-26</td><td>видит только свой факультет</td></tr>
+  </table>
+  <p class="small muted">На странице входа есть «Быстрый вход для жюри»: любой аккаунт открывается одним касанием. Все люди, оценки и документы вымышлены.</p>
+</section>
+
+<!-- ═════════════ 01 ПРОБЛЕМА ═════════════ -->
+<section>
+  <div class="eyebrow">01 · Проблема</div>
+  <h2>Учёба разбросана по пяти местам, а справка требует очереди</h2>
+  <p class="intro">Автор не учится в МГИМО, поэтому однокурсников не опрашивали. Вместо этого два ИИ-агента-исследователя параллельно собрали открытые источники: отзывы студентов, статьи о цифровизации вузов, бенчмарк чужих кабинетов, факты о МГИМО. По ним построены синтетические персоны с пометкой «сгенерировано ИИ» и анкета для реальной проверки.</p>
+
+  <table>
+    <tr><th style="width:36%">Что нашли в исследовании</th><th style="width:34%">Какое решение приняли</th><th>Где в продукте</th></tr>
+    <tr><td>Студенты каждый день открывают только расписание, главная страница кабинетов почти не используется</td><td>Главный экран отвечает на «куда идти, что изменилось, что сдать»</td><td>«Сегодня»: пара сейчас с таймером, изменения, дедлайны, заявки</td></tr>
+    <tr><td>Справку ищут не там, где она лежит, половина не находит раздел</td><td>Заказ в одно касание, названия словами студента, данные из профиля подставляются сами</td><td>«Заявки», кнопка «Справка» на главной</td></tr>
+    <tr><td>Запросы в деканат теряются, статус непонятен</td><td>Статус как у посылки: этапы, срок, ответственный, история, уведомление на каждом шаге</td><td>Карточка заявки и очередь учебного офиса</td></tr>
+    <tr><td>Балльная система непрозрачна</td><td>Одна фраза «как у меня дела» и калькулятор «что если»</td><td>«Учёба», карточка дисциплины</td></tr>
+    <tr><td>Переносы и замены узнают последними</td><td>Изменения подсвечены «было / стало», push-уведомление всей группе</td><td>«Расписание», деканат: «Изменить расписание»</td></tr>
+    <tr><td>Первокурсники не знают, к кому идти</td><td>ИИ-ассистент как первая линия, по своим данным</td><td>«Атташе»</td></tr>
+    <tr><td>Расписание не открыть в метро, иностранцам сложно по-русски</td><td>Приложение на телефоне с офлайн-режимом, английский интерфейс</td><td>PWA, переключатель языка</td></tr>
+  </table>
+
+  <h3>Почему именно эти разделы</h3>
+  <p>Обязательное ядро ТЗ (вход и профиль, расписание, успеваемость, заявки со статусом, уведомления) мы сделали полностью. Дополнительные разделы выбирали по одному правилу: <strong>что сегодня заставляет студента идти в деканат ногами</strong>. Так появились запись на приём вместо живой очереди, «Я заболел» с письмом преподавателю, все справки с QR в одном месте, оплата для контрактников и пересдачи одним действием. Для деканата: радар рисков, аналитика, журнал действий и карточка студента, чтобы цикл «студент спросил, офис ответил» замыкался в одном продукте.</p>
+  <div class="callout"><b>Главная идея.</b> Не «сайт с разделами», а помощник, который сам говорит студенту, что сегодня важно, и превращает поход в деканат в два касания на телефоне.</div>
+</section>
+
+<!-- ═════════════ 02 ПРОДУКТ ═════════════ -->
+<section>
+  <div class="eyebrow">02 · Продукт</div>
+  <h2>Что получилось</h2>
+  <p class="intro">Два кабинета в одном продукте: 11 разделов для студента и 8 для учебного офиса. Всё работает на телефоне от 360 px, в светлой и тёмной теме, на русском и английском.</p>
+  <figure><img src="img/today-desktop.jpg" /><figcaption>«Сегодня»: что идёт сейчас и сколько осталось, как дела с учёбой, изменения на неделе, дедлайны, статусы заявок и новости деканата.</figcaption></figure>
+  <div class="phones" style="margin-top:6mm">
+    <figure class="phone"><img src="img/today-mobile.jpg" /><figcaption>Главный экран на телефоне</figcaption></figure>
+    <figure class="phone"><img src="img/schedule-mobile.jpg" /><figcaption>Расписание с изменениями</figcaption></figure>
+    <figure class="phone"><img src="img/request-status-mobile.jpg" /><figcaption>Статус заявки как у посылки</figcaption></figure>
+    <figure class="phone"><img src="img/assistant-mobile.jpg" /><figcaption>Атташе отвечает по своим данным</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">02 · Кабинет студента</div>
+  <h2>Всё про учёбу в одном месте</h2>
+  <div class="grid2">
+    <figure><img src="img/grades-desktop.jpg" /><figcaption>«Учёба»: одна фраза «как у меня дела», рейтинг, место в группе, баллы по каждой дисциплине и прогноз.</figcaption></figure>
+    <figure><img src="img/request-status-desktop.jpg" /><figcaption>Заявка: этапы, срок, кто отвечает, история и сообщения учебного офиса.</figcaption></figure>
+    <figure><img src="img/documents-desktop.jpg" /><figcaption>«Документы»: электронный студбилет и все готовые справки с QR, открываются без сети.</figcaption></figure>
+    <figure><img src="img/verify-desktop.jpg" /><figcaption>Проверка подлинности по QR без входа: посольство или работодатель видит только минимум данных.</figcaption></figure>
+    <figure><img src="img/sick-leave-desktop.jpg" /><figcaption>«Больничный»: сообщить в день болезни, увидеть затронутые пары, получить письмо преподавателю от Атташе.</figcaption></figure>
+    <figure><img src="img/appointments-desktop.jpg" /><figcaption>Запись на приём вместо живой очереди: тема, день, свободный слот и талон с QR.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">02 · Кабинет деканата</div>
+  <h2>Рабочее место учебного офиса</h2>
+  <p class="intro">Сотрудник видит только свой факультет. Каждое действие сразу отражается у студента уведомлением и записывается в журнал, который нельзя изменить.</p>
+  <div class="grid2">
+    <figure><img src="img/staff-queue.jpg" /><figcaption>Очередь: что требует внимания, сводка от Атташе и «Сегодня в офисе».</figcaption></figure>
+    <figure><img src="img/staff-request.jpg" /><figcaption>Заявка: действия в один клик, черновик ответа от Атташе, только нужные данные студента.</figcaption></figure>
+    <figure><img src="img/staff-analytics.jpg" /><figcaption>Аналитика: паучьи диаграммы качества работы офиса и успеваемости групп.</figcaption></figure>
+    <figure><img src="img/staff-retakes.jpg" /><figcaption>Пересдачи одним действием: дата без пересечений с парами, свободная аудитория, направления всем сразу.</figcaption></figure>
+  </div>
+  <div class="grid2" style="margin-top:4mm">
+    <figure><img src="img/today-en.jpg" /><figcaption>Английский интерфейс: уведомления и новости переведены, имена латиницей.</figcaption></figure>
+    <figure><img src="img/today-light.jpg" /><figcaption>Светлая тема: та же строгая система, усиленный контраст линий и подписей.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ═════════════ 03 ИНСТРУМЕНТЫ ═════════════ -->
+<section>
+  <div class="eyebrow">03 · Инструменты</div>
+  <h2>Полный перечень ИИ-инструментов и сервисов</h2>
+  <p class="intro">Отдельной IDE не было: весь код писал и запускал агент в Claude Code. Фигмы тоже не было: дизайн-система, логотип и анимация чернил на входе сделаны кодом.</p>
+  <table>
+    <tr><th style="width:28%">Инструмент</th><th style="width:16%">Где</th><th>Для чего использовали</th></tr>
+    <tr><td>Claude Code, десктоп-приложение, модель Claude Opus</td><td>код, документы</td><td>Главный агент: разбор ТЗ и критериев, исследование, архитектура, весь код (29 тыс. строк TypeScript), схема БД и миграции, тексты интерфейса, дизайн-система, тесты, Docker и развёртывание, этот документ</td></tr>
+    <tr><td>Субагенты Claude Code</td><td>код, исследование</td><td>12 параллельных агентов: 2 исследователя (факты о МГИМО, боли студентов и бенчмарк) и 10 разработчиков, каждый со своим разделом продукта и своими файлами</td></tr>
+    <tr><td>Оркестрация Workflow в Claude Code</td><td>тестирование</td><td>Многоагентный QA: агенты по пяти областям, проверяющий агент после каждого круга, сверка с ТЗ, до трёх кругов исправлений (итоговый проход: 19 агентов, 531 вызов инструментов)</td></tr>
+    <tr><td>Навыки Claude Code (skills)</td><td>дизайн</td><td><code>redesign</code>: аудит шаблонных ИИ-паттернов в интерфейсе; <code>page-load-animations</code>: рецепты сдержанных анимаций; <code>workflow-authoring</code>: сборка оркестрации агентов</td></tr>
+    <tr><td>Встроенный браузер Claude Code</td><td>проверка</td><td>Агент сам открывал кабинет, нажимал кнопки, мерил вёрстку на 360 px и снимал скриншоты после каждого крупного блока</td></tr>
+    <tr><td>Playwright с системным Chrome</td><td>проверка</td><td>e2e-сценарии (80 прогонов), обход 230 адресов на трёх ширинах, двух темах и двух языках, скриншоты для этого отчёта</td></tr>
+    <tr><td>DeepSeek V3.2 в Amazon Bedrock</td><td>внутри продукта</td><td>Модель Атташе: ответы студенту по его данным, черновики заявок и писем, черновики ответов и сводка очереди для деканата, сообщения студентам в зоне риска, перевод объявлений на английский</td></tr>
+    <tr><td>Память Claude Code</td><td>процесс</td><td>Постоянные заметки между этапами: решения автора, стиль, обходные пути окружения, чтобы агент не повторял ошибок</td></tr>
+    <tr><td>Docker, Google Cloud, Caddy, Let's Encrypt, sslip.io</td><td>развёртывание</td><td>Сборка образа, временный сервер в Финляндии, HTTPS-сертификат и адрес по IP. Всё настроил агент командами gcloud</td></tr>
+  </table>
+  <p class="small muted">Тексты интерфейса, демо-данные (61 вымышленный студент, 1 172 занятия, 300 исторических заявок) и английские переводы написаны агентами, автор правил формулировки. Картинки нейросетью не генерировали.</p>
+</section>
+
+<!-- ═════════════ 04 ПРОЦЕСС ═════════════ -->
+<section>
+  <div class="eyebrow">04 · Процесс</div>
+  <h2>Как была выстроена работа с агентами</h2>
+  <p class="intro">Главный агент работал как техлид: разбирал задачу, писал документы для других агентов, раздавал работу параллельно и принимал её только после проверок. Человек выступал заказчиком и арт-директором.</p>
+  <div class="flowline">
+    <div class="step"><span class="n">1</span><b>Постановка</b><p>ТЗ, критерии оценки, решения автора по стеку и ИИ</p></div>
+    <div class="step"><span class="n">2</span><b>Документы для ИИ</b><p>CLAUDE.md, PRD, дизайн, безопасность, журнал</p></div>
+    <div class="step"><span class="n">3</span><b>Параллельные агенты</b><p>свой раздел, свои файлы, общая схема БД заранее</p></div>
+    <div class="step"><span class="n">4</span><b>Проверка</b><p>тесты, браузер, проверяющий агент, Docker</p></div>
+    <div class="step"><span class="n">5</span><b>Ревью автора</b><p>замечания по скриншотам, новый круг</p></div>
+  </div>
+
+  <h3>Документы, которые написаны для самих агентов</h3>
+  <div class="grid3">
+    <div class="card"><h4><code>CLAUDE.md</code></h4><p>Правила проекта, которые каждый агент читает первым: стек, команды, структура, 7 инвариантов безопасности, правила интерфейса автора.</p></div>
+    <div class="card"><h4><code>AGENTS.md</code></h4><p>Предупреждение «это не тот Next.js, что в обучающих данных»: агенты сверяются с документацией версии 16 из <code>node_modules</code>.</p></div>
+    <div class="card"><h4><code>docs/PRD.md</code></h4><p>Проблема, принципы, роли, обязательное ядро, смелые идеи, сценарии, которые проверяет жюри.</p></div>
+    <div class="card"><h4><code>docs/DESIGN.md</code></h4><p>Строгий стиль v2: токены цветов, один акцент, шрифты, тон текстов, что запрещено.</p></div>
+    <div class="card"><h4><code>docs/SECURITY.md</code></h4><p>Модель угроз STRIDE, инварианты для разработчиков и агентов, что проверяет автотест.</p></div>
+    <div class="card"><h4><code>docs/PROCESS.md</code></h4><p>Журнал этапов и ошибок ИИ. Агенты дописывали его сами после каждого значимого решения.</p></div>
+  </div>
+
+  <h3>Правила, которые позволили агентам работать параллельно</h3>
+  <ul>
+    <li><strong>Схема базы до запуска агентов.</strong> Все новые таблицы описаны одной миграцией заранее, иначе одновременный <code>drizzle-kit generate</code> ломал бы снимки схемы.</li>
+    <li><strong>Владение файлами.</strong> У каждого агента свой список файлов. Проблему в чужом файле агент не чинит, а описывает владельцу в отчёте.</li>
+    <li><strong>Структурированные отчёты.</strong> Агенты возвращают JSON по схеме: что исправлено, что осталось, что передать соседям. Проверяющий агент раздаёт падения владельцам.</li>
+    <li><strong>Свои метки и папки.</strong> Каждый агент помечает тестовые сеансы своим User-Agent и пишет во временную папку, чтобы не выбивать чужие проверки.</li>
+    <li><strong>Готово значит проверено.</strong> Раздел принимается только после типов, линтера, теста безопасности и прогона в браузере.</li>
+  </ul>
+
+</section>
+
+<!-- ═════════════ 05 ПРОМПТЫ ═════════════ -->
+<section>
+  <div class="eyebrow">05 · Промпты</div>
+  <h2>Ключевые постановки задач по этапам</h2>
+  <p class="intro">Слева постановка автора в редакторской правке: формулировки приведены к рабочему виду, требования и порядок сохранены. Справа что сделал агент в ответ.</p>
+
+  <div class="prompt"><div class="head"><b>Старт: ТЗ и рамки</b><span>этап 0</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Участвую в хакатоне «Цифровой деканат будущего», ТЗ прилагаю. Работаю один, своей инфраструктуры нет, развёртывание передам позже. Требования: надёжный бэкенд, проработанный фронтенд, продуманные UX и UI. Ассистент внутри продукта работает на DeepSeek через API, GigaChat не используем.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Разобрал критерии оценки и обязательное ядро</li><li>Выбрал стек под задачу и упаковку в Docker Compose</li><li>Запустил двух агентов-исследователей параллельно</li><li>Завёл журнал процесса для отчёта</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Подключение модели</b><span>этап 7</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Доступ к DeepSeek V3.2 получен через Amazon Bedrock, регион us-east-1. Укажи, где хранить ключ, подключение и проверку выполни самостоятельно.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Нашёл в документации AWS точный ID модели и Converse API</li><li>Ключ только в переменных окружения сервера, проверка <code>ai:check</code> без вывода ключа</li><li>Живой прогон сценариев и попытка получить чужие оценки</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Редизайн</b><span>этап 8</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Интерфейс выглядит как типовая генерация нейросети, палитра неудачная. Нужен полный редизайн. Ограничения: без стрелок и длинных тире в текстах, логотип монохромный и выразительнее. Название продукта: MGIMO Hub.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Разобрал признаки ИИ-шаблона: градиенты, «золото», иконки в плашках, синюшная тёмная тема</li><li>Показал три направления, автор выбрал строгое с кобальтовым акцентом</li><li>Переписал дизайн-систему и все экраны, заменил 134 длинных тире и 20 стрелок</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Страница входа</b><span>этап 9</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Страница входа не дотягивает до уровня продукта. Новая композиция: форма справа, анимированное появление логотипа, живые чернила на фоне.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>WebGL-шейдер «тушь в воде», монохромный, с паузой в фоне и статичным кадром для reduced motion</li><li>Сцена: логотип проявляется в центре и переезжает к форме</li><li>Три итерации по скриншотам до плавного варианта</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Полировка и ИИ для деканата</b><span>этап 10</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Блоки в профиле не выровнены, интерфейс выглядит сжатым. Добавь сдержанные анимации внутри сервиса с опорой на навыки. Оставь две темы: светлую и тёмную. Деканату нужны генератор справок и доступ к ассистенту.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Ровная сетка и отступы в 21 файле</li><li>Анимации по навыку page-load-animations, с уважением к reduced motion</li><li>Черновик ответа студенту и сводка очереди от Атташе для сотрудника</li></ul></div>
+  </div></div>
+</section>
+
+<section class="flow">
+  <div class="eyebrow">05 · Промпты</div>
+  <h2>Продукт, качество, выпуск</h2>
+
+  <div class="prompt"><div class="head"><b>Новые разделы</b><span>этап 11</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Исследуй, какие задачи студентов ещё не решены. Обязательно: работа без интернета и push-уведомления, чтобы расписание открывалось в метро; график оплаты и напоминания для платного обучения; английский интерфейс для иностранных студентов; все справки с QR-кодом в одном разделе; сценарий «Я заболел». Отдельно предложи, что ещё полезно деканату.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Описал всю новую схему БД одной миграцией заранее</li><li>Запустил 10 агентов-разработчиков параллельно, у каждого свой раздел и файлы</li><li>Собрал результат, починил интеграцию, тест безопасности вырос до 46 проверок</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Проверка всего продукта</b><span>этап 12</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Проведи полный аудит UX и UI: каждая кнопка и каждый сценарий должны работать. Покрой тестами только ключевые пути, исправь найденное, не больше трёх итераций. Сверь результат с ТЗ и подготовь проект к сдаче.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Оркестрация: 5 агентов по областям и агент сверки с ТЗ, проверяющий после каждого круга</li><li>Около 40 исправлений, 6 файлов e2e-тестов</li><li>Финал: пересоздание данных, полный прогон, сборка</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Ревью по скриншотам</b><span>этап 12</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Блоки разной высоты, на главной приходится прокручивать. Студенческий билет дублируется в профиле и в документах, нужен один источник. Навигация деканата перегружена, «Радар» убрать из меню.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Нашёл общую причину: колонки разной высоты, перевёл экраны на ряды одинаковой высоты</li><li>Главная стала на 400 px короче, студбилет только в «Документах»</li><li>Меню деканата: 13 пунктов свёрнуты в 8 разделов с вкладками</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Английский интерфейс до конца</b><span>этап 12</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Новости деканата и личные уведомления в английской версии остаются на русском. Нужен полный перевод, включая имена.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Английские поля у объявлений и уведомлений, новое объявление Атташе переводит сам после публикации</li><li>Имена латиницей, как в загранпаспорте, на студбилете и кириллица</li><li>Все тексты уведомлений собраны в одном модуле на двух языках</li></ul></div>
+  </div></div>
+
+  <div class="prompt"><div class="head"><b>Выпуск по ссылке</b><span>этап 13</span></div><div class="body">
+    <div class="say"><span class="label">Постановка автора</span><p>Разверни временный демо-стенд в Google Cloud с адресом на sslip.io. Отдельный проект, расходы только за счёт кредитов. Для ассистента используй выданный ключ.</p></div>
+    <div class="did"><span class="label">Что сделал агент</span><ul><li>Отдельный проект и бюджет-оповещение на расходы сверх кредитов</li><li>Виртуальная машина, Caddy с сертификатом Let's Encrypt, база закрыта снаружи</li><li>Проверки безопасности против публичного адреса: 46 из 46</li></ul></div>
+  </div></div>
+
+  <h3>Что работало в постановках</h3>
+  <div class="grid3">
+    <div class="card"><h4>Рамки в первой фразе</h4><p>Цель, ограничения и модель названы сразу: агент не тратит итерацию на догадки о бюджете, составе команды и стеке.</p></div>
+    <div class="card"><h4>Запреты явно</h4><p>Стрелки, длинные тире, дисклеймеры, лишние пункты меню перечислены прямо. Вкус автора не приходится угадывать.</p></div>
+    <div class="card"><h4>Лимит итераций</h4><p>«Не больше трёх кругов» ограничивает полировку: агент чинит главное и сдаёт результат, а не шлифует бесконечно.</p></div>
+    <div class="card"><h4>Замечание к экрану</h4><p>Ревью идёт по скриншотам. Агент ищет общую причину дефекта и чинит её во всех экранах, а не в одном месте.</p></div>
+    <div class="card"><h4>Сначала исследование</h4><p>Вопрос «что ещё не решено у студентов» запускает исследование и план, и только потом разработку.</p></div>
+    <div class="card"><h4>Доступы под контролем</h4><p>Отдельный проект, расходы только из кредитов, ключи только в окружении сервера и без вывода в журнал.</p></div>
+  </div>
+</section>
+
+<!-- ═════════════ 06 ЗАДАНИЯ СУБАГЕНТАМ ═════════════ -->
+<section>
+  <div class="eyebrow">06 · Постановка задач агентам</div>
+  <h2>Как главный агент ставил задачи субагентам</h2>
+  <p class="intro">Каждое задание устроено одинаково: роль и контекст, что прочитать до работы, что сделать по шагам, границы файлов, инварианты безопасности и критерии готовности. Ниже фрагменты настоящих заданий, сокращения отмечены многоточием.</p>
+
+  <div class="brief"><div class="head"><b>Агент-исследователь: боли студентов</b><span class="muted">этап 1</span></div>
+<pre><em>Роль.</em> Ты UX-исследователь для хакатона «Цифровой деканат будущего». Автор не учится в МГИМО, поэтому опросить однокурсников он не может: нужна кабинетная база из открытых источников.
+<em>Границы.</em> Запиши результат в docs/research/student-insights.md. Больше никакие файлы проекта не трогай.
+<em>Структура.</em> 1. Ключевые боли (8-12), по каждой 1-2 подтверждения из источников и вывод для дизайна. 2. Бенчмарк 5-7 кабинетов: что позаимствовать, что раздражает. 3. Синтетические персоны с явной пометкой «сгенерировано ИИ». 4. Jobs To Be Done. 5. Выводы для прототипа. 6. Анкета для реальных студентов. 7. Источники.
+<em>Правила.</em> Только публичные источники, без персональных данных реальных людей …</pre></div>
+
+  <div class="brief"><div class="head"><b>Агент-разработчик: больничный</b><span class="muted">этап 11</span></div>
+<pre><em>Задача.</em> Сейчас студенту после болезни нужна неделя хождений: отнести справку, объяснить пропуски, договориться о переносе контрольных. Делаем один сценарий в кабинете и очередь проверки у деканата.
+<em>Сначала прочитай.</em> CLAUDE.md (инварианты), docs/DESIGN.md, docs/SECURITY.md, AGENTS.md: Next.js 16, сверяйся с node_modules/next/dist/docs, про загрузку файлов и лимиты тела запроса тоже посмотри там. Таблицы sick_leaves и sick_leave_files уже есть, миграция применена. <em>Схему НЕ меняй.</em>
+<em>Паттерны.</em> data/schedule.ts (пары за период), data/staff.ts (область сотрудника: facultyId null значит все факультеты), assistant/providers.ts (вызов модели, офлайн-фолбэк, чистка тире) …
+<em>Что сделать.</em> Нет открытого больничного: форма «Сообщить о болезни». Есть открытый: что затрагивает (пары и дедлайны в периоде), для каждой дисциплины «Письмо преподавателю»: черновик от Атташе, офлайн-шаблон, если модели нет …</pre></div>
+
+  <div class="brief"><div class="head"><b>Оркестрация QA: общее правило для всех агентов</b><span class="muted">этап 12</span></div>
+<pre><em>ВАЖНО, это хакатон:</em> тестов немного и только на главное. Цель: всё нажимается и работает. В спеке области 4-8 тестов на ключевые сценарии.
+<em>Не трогай чужое.</em> Встроенный браузер принадлежит пользователю, скриншоты только через Playwright. Не пересоздавай базу: это сделает финальный этап. Тесты, меняющие данные, должны перезапускаться на той же базе.
+<em>Владение файлами.</em> studentCore: вход, оболочка, Сегодня, расписание, учёба, профиль. studentServices: заявки, уведомления, помощник, документы. serviceFlows: приём, больничный, оплата. staffCore и staffInsights: деканат …
+<em>Отчёт по схеме.</em> fixed[], remaining[], crossArea[] (проблема в чужом файле с путём и предложением), testsPassed, testsFailed.</pre></div>
+  <p class="small muted">Задания субагентам, промпты исследователей и сценарии оркестрации лежат в репозитории и истории проекта: <code>docs/prompts/</code>, <code>docs/PROCESS.md</code>.</p>
+</section>
+
+<!-- ═════════════ 07 ОШИБКИ ИИ ═════════════ -->
+<section>
+  <div class="eyebrow">07 · Ошибки ИИ</div>
+  <h2>Где ИИ ошибался и как мы это ловили</h2>
+  <p class="intro">Каждую ошибку записывали в журнал с тем, как её нашли. Самый частый способ: автотест или живой прогон, а не чтение кода. Полный список из 34 пунктов в <code>docs/PROCESS.md</code>.</p>
+  <table>
+    <tr><th class="num">#</th><th style="width:36%">Что пошло не так</th><th style="width:22%">Как нашли</th><th>Как исправили</th></tr>
+    <tr><td class="num">1</td><td>Знания модели о Next.js устарели: новая версия 16 с другими API</td><td>предупреждение в <code>AGENTS.md</code></td><td>агент читал документацию версии из <code>node_modules</code> до написания кода</td></tr>
+    <tr><td class="num">8</td><td><strong>Чужая заявка отдавала HTTP 200</strong>: скелетон загрузки начинал ответ раньше проверки доступа</td><td>автотест безопасности</td><td>у детальных страниц нет скелетона, честный 404</td></tr>
+    <tr><td class="num">31</td><td>Та же ошибка повторилась у разных агентов ещё три раза</td><td>e2e-тест на 404 по чужому id</td><td>правило в заданиях сработало только вместе с тестом, теперь оба</td></tr>
+    <tr><td class="num">9</td><td>На 360 px главный экран расползался до 525 px</td><td>автопроверка ширины</td><td>базовый трек сеток <code>minmax(0,1fr)</code></td></tr>
+    <tr><td class="num">15</td><td>Модель отвечала «"отлично" невозможно», хотя впереди ещё 40 баллов</td><td>живой прогон вопросов к Атташе</td><td>в контекст добавлены «сколько ещё можно набрать» и правило</td></tr>
+    <tr><td class="num">17</td><td>Черновик для студента в зоне риска советовал подать заявление, которое уже подано</td><td>живой прогон черновика</td><td>в контекст переданы открытые заявки студента</td></tr>
+    <tr><td class="num">30</td><td>Атташе говорил, что дата пересдачи не назначена, хотя направление уже выпущено</td><td>вопрос к ассистенту в собранном Docker-образе</td><td>в контекст долга добавлены дата, аудитория и номер направления</td></tr>
+    <tr><td class="num">21</td><td>Ось «Без долгов» в аналитике не видела долг: подзапрос ссылался не на ту колонку</td><td>сверка диаграммы с SQL</td><td>явные алиасы таблиц</td></tr>
+    <tr><td class="num">24</td><td>Защитный заголовок у файла справки перезаписывался глобальным правилом</td><td>проверка заголовков curl-ом</td><td>отдельное правило для этого пути</td></tr>
+            <tr><td class="num">34</td><td>Модель не всегда давала кнопку черновика справки для визы</td><td>e2e-тест ассистента</td><td>правило в системном промпте на двух языках</td></tr>
+  </table>
+  <div class="callout"><b>Вывод для процесса.</b> Правило в инструкции агенту снижает число ошибок, но не убирает их. Ошибка перестаёт повторяться, когда на неё есть автотест, поэтому мы превращали каждую найденную проблему безопасности в проверку.</div>
+</section>
+
+<!-- ═════════════ 08 ВАРИАНТЫ ═════════════ -->
+<section>
+  <div class="eyebrow">08 · Удачные и неудачные варианты</div>
+  <h2>От «нейрослопа» к строгому стилю</h2>
+  <p class="intro">Первую версию автор отклонил: градиенты, «золото», засечки, иконки в цветных плашках, синюшная тёмная тема. Агент разобрал эти признаки шаблонного ИИ-дизайна и пересобрал систему: нейтральные серые, один кобальтовый акцент, шрифт Geist, без теней и декора.</p>
+  <div class="duo">
+    <figure><span class="tag bad">Отклонено</span><img src="../screenshots/v1/02-today-desktop-dark.jpg" /><figcaption>Версия 1: шаблонный ИИ-интерфейс.</figcaption></figure>
+    <figure><span class="tag ok">Итог</span><img src="img/today-desktop.jpg" /><figcaption>Итоговая версия: строгий стиль, ряды одинаковой высоты.</figcaption></figure>
+    <figure><span class="tag bad">Отклонено</span><img src="../screenshots/v1/01-login-dark.jpg" /><figcaption>Простая форма входа: «вход не нравится».</figcaption></figure>
+    <figure><span class="tag ok">Итог</span><img src="img/login-desktop.jpg" /><figcaption>Вход с WebGL-чернилами, три итерации шейдера.</figcaption></figure>
+  </div>
+  <div class="duo" style="margin-top:5mm">
+    <figure><span class="tag bad">Ошибка</span><img src="../screenshots/v1/08-today-360px-overflow-bug.jpg" style="max-height:62mm;object-fit:cover;object-position:top" /><figcaption>На 360 px экран расползался до 525 px: нашла автопроверка ширины.</figcaption></figure>
+    <figure><span class="tag info">Ревью</span><img src="img/staff-announcements.jpg" style="max-height:62mm;object-fit:cover;object-position:top" /><figcaption>Объявления после замечания «пустовато и сжато»: текст слева, кому и предпросмотр уведомления справа.</figcaption></figure>
+  </div>
+</section>
+
+<!-- ═════════════ 09 АТТАШЕ ═════════════ -->
+<section>
+  <div class="eyebrow">09 · ИИ внутри продукта</div>
+  <h2>Атташе: ассистент, который не может навредить</h2>
+  <p class="intro">Атташе отвечает по данным самого студента и превращает фразу «нужна справка для визы в Италию» в готовый черновик заявки. Отправляет её всегда студент сам.</p>
+  <div class="grid2">
+    <figure><img src="img/assistant-desktop.jpg" /><figcaption>Живой ответ модели DeepSeek V3.2 с кнопкой черновика заявки.</figcaption></figure>
+    <div>
+      <h3 style="margin-top:0">Семь сценариев модели</h3>
+      <table>
+        <tr><td>Студент</td><td>ответы про пары, баллы, сессию, справки по своим данным</td></tr>
+        <tr><td>Студент</td><td>черновик заявки из обычной фразы</td></tr>
+        <tr><td>Студент</td><td>письмо преподавателю о переносе контрольной при болезни</td></tr>
+        <tr><td>Деканат</td><td>черновик ответа студенту: уточнить, статус, отказ</td></tr>
+        <tr><td>Деканат</td><td>сводка очереди: что срочно, что ждёт студента</td></tr>
+        <tr><td>Деканат</td><td>сообщение студенту в зоне риска</td></tr>
+        <tr><td>Деканат</td><td>перевод объявления на английский после публикации</td></tr>
+      </table>
+    </div>
+  </div>
+  <h3>Как устроена безопасность ассистента</h3>
+  <div class="grid3">
+    <div class="card"><h4>Только свои данные</h4><p>В контекст модели попадают данные текущего студента и ничего лишнего: без телефона, почты, даты рождения и номера зачётки.</p></div>
+    <div class="card"><h4>Белый список действий</h4><p>Модель возвращает ответ и действия. Сервер проверяет каждое: тип заявки, значения полей, свои курсы, только внутренние ссылки.</p></div>
+    <div class="card"><h4>Работает без модели</h4><p>Без ключа или при сбое API включается офлайн-режим на правилах, демо не ломается. Ключ хранится только на сервере.</p></div>
+  </div>
+</section>
+
+<!-- ═════════════ 10 ЗАЩИТА ═════════════ -->
+<section>
+  <div class="eyebrow">10 · Защита</div>
+  <h2>Вход, хранение данных и защита простыми словами</h2>
+  <div class="grid2">
+    <div class="card"><h4>Пароль</h4><p>Пароль нигде не хранится. В базе лежит только его «отпечаток» argon2id: современный стандарт, медленный для перебора.</p></div>
+    <div class="card"><h4>Сеанс</h4><p>После входа браузер получает случайный ключ в защищённой cookie, недоступной скриптам страницы. В базе хранится не сам ключ, а его хэш: даже утечка базы не даст войти.</p></div>
+    <div class="card"><h4>Только свои данные</h4><p>Сервер узнаёт студента по сеансу и отдаёт только его записи. Номер заявки в адресе означает лишь «какую из моих». Чужая заявка открывается как «страница не найдена».</p></div>
+    <div class="card"><h4>Перебор паролей</h4><p>После 5 неудачных попыток вход по логину блокируется на 15 минут, есть отдельный лимит по IP.</p></div>
+    <div class="card"><h4>Деканат</h4><p>Сотрудник видит только свой факультет. Каждый просмотр карточки студента и каждое действие пишутся в журнал, который нельзя изменить или удалить: это запрещено на уровне базы данных.</p></div>
+    <div class="card"><h4>Ключи сервисов</h4><p>Ключи ИИ и push-уведомлений лежат только в переменных окружения сервера. В коде и в браузере их нет.</p></div>
+  </div>
+  <h3>Как это проверено</h3>
+  <p><code>npm run test:security</code> делает 46 проверок против работающего сервера: открыть чужую заявку, справку, дисциплину, талон, квитанцию; зайти студентом в кабинет деканата; сотрудником другого факультета открыть чужую заявку; проверить флаги cookie, заголовки CSP и HSTS, хэши в базе, блокировку после 5 попыток, CSRF у ассистента, минимум данных на странице проверки справки. Последний прогон против публичного адреса: <strong>46 из 46</strong>.</p>
+  <p class="small muted">Все студенты, преподаватели, оценки и документы вымышлены. На справках и квитанциях водяной знак «образец», страницы закрыты от поисковиков, логотипа МГИМО нет: у продукта свой знак.</p>
+</section>
+
+<!-- ═════════════ 11 АРХИТЕКТУРА ═════════════ -->
+<section>
+  <div class="eyebrow">11 · Архитектура</div>
+  <h2>Как устроено внутри</h2>
+  <p class="intro">Один Next.js-сервер без состояния и PostgreSQL. Сеансы и лимиты хранятся в базе, поэтому приложение можно запускать в несколько экземпляров за балансировщиком.</p>
+  <div class="arch">
+    <div class="col">
+      <div class="lane">Клиент</div>
+      <div class="box"><b>Браузер и PWA</b>React 19, установка на экран телефона, свой service worker: расписание, баллы и документы без сети, push.</div>
+      <div class="box"><b>Студент</b>11 разделов, русский и английский, светлая и тёмная тема.</div>
+      <div class="box"><b>Учебный офис</b>8 разделов, область факультета, журнал действий.</div>
+    </div>
+    <div class="col">
+      <div class="lane">Сервер</div>
+      <div class="box dark"><b>Caddy</b>HTTPS и сертификат Let's Encrypt, наружу только порты 80 и 443.</div>
+      <div class="box core"><b>Next.js 16 · App Router</b>Серверные компоненты и Server Actions. <code>proxy.ts</code> проверяет сеанс. Слой данных <code>src/lib/data</code>: каждый запрос начинается с <code>requireStudent()</code> или <code>requireStaff()</code>, фильтр по id из сеанса.</div>
+      <div class="box"><b>Route Handlers</b>ассистент, календарь .ics, файлы справок в песочнице, push-подписки, проверка справки по QR.</div>
+    </div>
+    <div class="col">
+      <div class="lane">Данные и сервисы</div>
+      <div class="box"><b>PostgreSQL 17 · Drizzle ORM</b>30 таблиц, 7 миграций. Журнал действий только дописывается: изменение запрещено триггером.</div>
+      <div class="box"><b>DeepSeek V3.2 · Amazon Bedrock</b>вызывается только с сервера, офлайн-режим без ключа.</div>
+      <div class="box"><b>Web Push</b>VAPID, адреса только известных push-сервисов.</div>
+    </div>
+  </div>
+  <table>
+    <tr><th style="width:24%">Слой</th><th>Что использовано и почему</th></tr>
+    <tr><td>Фронтенд</td><td>Next.js 16, React 19, TypeScript strict, Tailwind CSS 4, свои UI-компоненты, motion для анимаций</td></tr>
+    <tr><td>Бэкенд</td><td>серверные компоненты и Server Actions в том же Next.js: меньше движущихся частей, проверка прав рядом с данными</td></tr>
+    <tr><td>Данные</td><td>PostgreSQL 17 и Drizzle ORM: стабильный, чистый TypeScript, без бинарного движка, проще Docker</td></tr>
+    <tr><td>Вход</td><td>argon2id, случайный токен 256 бит в httpOnly-cookie, в базе SHA-256 токена, лимиты в базе</td></tr>
+    <tr><td>Валидация</td><td>zod на каждом входе: формы, API, ответы модели</td></tr>
+    <tr><td>Развёртывание</td><td>Docker Compose: база, приложение, Caddy. Миграции и демо-данные применяются при старте контейнера</td></tr>
+  </table>
+</section>
+
+<!-- ═════════════ 12 РОЛЬ АВТОРА ═════════════ -->
+<section>
+  <div class="eyebrow">12 · Роль автора</div>
+  <h2>Постановка, решения и приёмка</h2>
+  <p class="intro">Код вручную автор не писал. Он отвечал за рамки проекта, продуктовые и визуальные решения, доступы к внешним сервисам и приёмку результата.</p>
+  <div class="grid3">
+    <div class="card"><h4>Цель и рамки</h4><p>Сформулировал задачу по ТЗ и ограничения: участие в одиночку, без своей инфраструктуры на старте, DeepSeek как модель ассистента.</p></div>
+    <div class="card"><h4>Доступы</h4><p>Получил доступ к DeepSeek V3.2 в Amazon Bedrock и сам внёс ключ в окружение. Определил проект Google Cloud для демо-стенда.</p></div>
+    <div class="card"><h4>Визуальное направление</h4><p>Отклонил первую версию интерфейса, из трёх направлений утвердил строгое. Задал правила текстов: без длинных тире, стрелок и дисклеймеров.</p></div>
+    <div class="card"><h4>Продуктовые решения</h4><p>Определил состав новых разделов, отказался от рассылок по сегментам, убрал «Радар» из меню, студбилет оставил в «Документах».</p></div>
+    <div class="card"><h4>Приёмка</h4><p>Принимал каждую итерацию на ноутбуке и телефоне, фиксировал дефекты скриншотами: неровная сетка, сжатые экраны, дрожание фона.</p></div>
+    <div class="card"><h4>Сдача</h4><p>Проверка с российского мобильного интернета, запись демо-видео, отправка работы через личный кабинет хакатона.</p></div>
+  </div>
+</section>
+
+<!-- ═════════════ 13 КАК ПРОВЕРИТЬ ═════════════ -->
+<section class="flow">
+  <div class="eyebrow">13 · Как проверить</div>
+  <h2>Главный путь за 5 минут</h2>
+  <table>
+    <tr><th class="num">#</th><th style="width:26%">Шаг</th><th>Что увидеть</th></tr>
+    <tr><td class="num">1</td><td>Вход как <code>student.anna</code></td><td>«Сегодня»: какая пара идёт, смена аудитории, дедлайны, статус справки для посольства</td></tr>
+    <tr><td class="num">2</td><td>«Расписание»</td><td>неделя с переносом, отменой и другой аудиторией, экспорт в календарь</td></tr>
+    <tr><td class="num">3</td><td>«Учёба»</td><td>«как у меня дела», рейтинг, калькулятор «что если» в дисциплине</td></tr>
+    <tr><td class="num">4</td><td>«Заявки», «Справка об обучении»</td><td>форма с данными из профиля, статус «Подана», срок, трекер</td></tr>
+    <tr><td class="num">5</td><td>«Атташе», «Нужна справка для визы»</td><td>ответ по своим данным и кнопка готового черновика</td></tr>
+    <tr><td class="num">6</td><td>Выход, вход как <code>staff.office</code></td><td>заявка Анны в очереди, «Взять в работу», «Готово», и у Анны сразу уведомление и справка с QR</td></tr>
+    <tr><td class="num">7</td><td>Подставить чужой id в адрес</td><td>«страница не найдена»: чужие данные не открываются</td></tr>
+    <tr><td class="num">8</td><td>Открыть с телефона</td><td>всё то же на 360 px, установка на экран, офлайн-расписание</td></tr>
+  </table>
+</section>
+
+</body>
+</html>

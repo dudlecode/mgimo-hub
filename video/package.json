@@ -1,0 +1,26 @@
+{
+  "name": "mgimo-hub-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "record": "cd .. && node video/record/record.mjs",
+    "studio": "remotion studio",
+    "render": "remotion render MGIMOHub out/mgimo-hub-demo.mp4 --codec h264 --crf 18 --color-space bt709",
+    "still": "remotion still MGIMOHub",
+    "check:camera": "../node_modules/.bin/tsx record/jerk-check.tsx"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.541",
+    "@remotion/media-utils": "4.0.541",
+    "@remotion/transitions": "4.0.541",
+    "qrcode": "1.5.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/qrcode": "1.5.5",
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
