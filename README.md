@@ -12,7 +12,7 @@
 Личный кабинет студента, рабочее место учебного офиса и ИИ-ассистент «Атташе»,<br>
 который отвечает по данным самого студента и готовит заявки за него.
 
-**[Открыть прототип](https://34-88-153-35.sslip.io)** &nbsp;·&nbsp; [Ролик, 3 минуты](https://github.com/dudlecode/mgimo-hub/releases/tag/v1.0) &nbsp;·&nbsp; [Как это сделано, PDF](docs/MGIMO-Hub-process.pdf) &nbsp;·&nbsp; [Журнал работы с ИИ](docs/PROCESS.md)
+**[Открыть прототип](https://34-88-153-35.sslip.io)** &nbsp;·&nbsp; [Ролик, 3 минуты](https://github.com/dudlecode/mgimo-hub/releases/tag/v1.0) &nbsp;·&nbsp; [Доступ для жюри, PDF](docs/MGIMO-Hub-access.pdf) &nbsp;·&nbsp; [Как это сделано, PDF](docs/MGIMO-Hub-process.pdf) &nbsp;·&nbsp; [Журнал работы с ИИ](docs/PROCESS.md)
 
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-2f2f2f?style=flat-square&logo=nextdotjs&logoColor=white) ![React 19](https://img.shields.io/badge/React-19-2f2f2f?style=flat-square&logo=react&logoColor=white) ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-2f2f2f?style=flat-square&logo=typescript&logoColor=white) ![PostgreSQL 17](https://img.shields.io/badge/PostgreSQL-17-2f2f2f?style=flat-square&logo=postgresql&logoColor=white) ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-2f2f2f?style=flat-square&logo=tailwindcss&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-Compose-2f2f2f?style=flat-square&logo=docker&logoColor=white)
 
@@ -230,7 +230,7 @@ sequenceDiagram
   actor S as Студент
   participant H as MGIMO Hub
   actor O as Учебный офис
-  actor V as Посольство
+  actor V as Проверяющий
   S->>H: заказывает справку, форма заполнена из профиля
   H-->>O: заявка в очереди своего факультета
   O->>H: «Взять в работу», «Начать подготовку», «Сформировать справку с QR»
@@ -273,11 +273,11 @@ sequenceDiagram
 
 Весь код, тексты, дизайн-система, тесты и развёртывание сделаны ИИ-агентами в Claude Code. Человек ставил задачи, принимал продуктовые и визуальные решения и проверял результат.
 
-| ~16 часов | 34 ИИ-агента | 29 тыс. строк | 230 адресов |
+| ~16 часов | 37 ИИ-агентов | 29 тыс. строк | 230 адресов |
 |:---:|:---:|:---:|:---:|
-| от ТЗ до сайта по ссылке | 2 исследователя, 10 разработчиков разделов, 22 в оркестрации QA | TypeScript, весь код написан ИИ | автоматический обход: три ширины, две темы, два языка |
+| от ТЗ до сайта по ссылке | 2 исследователя, 10 разработчиков, 22 в оркестрации QA, 3 проверяющих | TypeScript, весь код написан ИИ | автоматический обход: три ширины, две темы, два языка |
 
-- **[Описание процесса для жюри, PDF, 19 страниц](docs/MGIMO-Hub-process.pdf).** Инструменты, ключевые постановки задач, задания субагентам, ошибки ИИ и как их ловили, удачные и неудачные варианты.
+- **[Описание процесса для жюри, PDF, 20 страниц](docs/MGIMO-Hub-process.pdf).** Инструменты, ключевые постановки задач, задания субагентам, ошибки ИИ и как их ловили, финальная проверка тремя агентами, удачные и неудачные варианты.
 - **[Журнал процесса](docs/PROCESS.md).** Все этапы, решения и исправленные ошибки ИИ.
 - **[Ролик](video/README.md).** Тоже собран кодом: скрипт проходит по живому кабинету как человек и снимает экран, монтаж и титры описаны в Remotion. Готовый файл лежит в [релизе v1.0](https://github.com/dudlecode/mgimo-hub/releases/tag/v1.0).
 - **Документы для агентов.** [CLAUDE.md](CLAUDE.md), [PRD](docs/PRD.md), [дизайн-система](docs/DESIGN.md), [безопасность](docs/SECURITY.md), [исследования](docs/research/).
@@ -306,6 +306,7 @@ npm run dev
 | `npm run test:e2e` | e2e-сценарии Playwright |
 | `npm run ai:check` | проверка подключения к модели, ключ не выводится |
 | `npm run report` | собирает PDF с описанием процесса |
+| `npm run access` | собирает страницу для жюри: ссылка, аккаунты, маршрут |
 | `npm run readme:images` | пересобирает картинки этого README с запущенного сервера |
 
 ## Развёртывание

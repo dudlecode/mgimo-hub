@@ -5,7 +5,9 @@ import type { TranscriptRow } from "@/lib/data/grades";
 import { getRequestType } from "@/lib/requests/catalog";
 import { displayFields } from "@/lib/requests/display";
 import { CONTROL_LABEL, MARK_LABEL, type Mark } from "@/lib/grades";
-import { dayKey, formatDateLong, formatDateNumeric, parseDayKey } from "@/lib/time";
+import { formatDateLong, formatDateNumeric, mskDate, parseDayKey } from "@/lib/time";
+import { latin } from "@/lib/i18n/translit";
+import { countryEn } from "@/lib/requests/countries";
 import { getSemester } from "@/lib/academic";
 import { LogoMark } from "@/components/logo";
 import { fullName } from "@/lib/utils";
@@ -23,8 +25,15 @@ const FACULTY_EN: Record<string, string> = {
   ffe: "School of Financial Economics",
 };
 
-const TRANSLIT: Record<string, string> = { а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts", ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "iu", я: "ia" };
-const tr = (s: string) => s.split("").map((c) => { const l = c.toLowerCase(); const t = TRANSLIT[l]; return t === undefined ? c : c === l ? t : t.charAt(0).toUpperCase() + t.slice(1); }).join("");
+// Латиница в документах та же, что в английском интерфейсе: имя пишется одинаково везде
+const tr = latin;
+/** Дата по-английски для документа: 20 December 2026 */
+const dateEn = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" });
+/** Дата из поля формы (ГГГГ-ММ-ДД) по-английски; если разобрать не удалось, как введено */
+const fieldDateEn = (v: string | undefined) => {
+  const d = parseDayKey(v);
+  return d ? dateEn(d) : (v ?? "");
+};
 
 export type CertificateProps = {
   r: { id: string; type: string; fields: Record<string, string>; verifyCode: string | null; documentNo: string | null; readyAt: Date | null; updatedAt: Date; assignedStaff: { firstName: string; lastName: string } | null };
@@ -45,7 +54,8 @@ export function CertificateView({ r, student, group, faculty, transcript, url, q
   const en = r.type === "embassy-certificate" || (r.type === "transcript" && r.fields.language === "en");
   const sem = getSemester(issued);
   const fields = displayFields(r.type, r.fields);
-  const signer = r.assignedStaff ? `${r.assignedStaff.firstName[0]}. ${r.assignedStaff.lastName}` : "И. Соколова";
+  const signerRu = r.assignedStaff ? `${r.assignedStaff.firstName[0]}. ${r.assignedStaff.lastName}` : "И. Соколова";
+  const signer = en ? latin(signerRu) : signerRu;
   const birth = parseDayKey(student.birthDate)!;
   const studyEnd = `31.08.${student.enrollmentYear + 4}`;
 
@@ -76,7 +86,7 @@ export function CertificateView({ r, student, group, faculty, transcript, url, q
           </div>
           <div className="text-right text-[11px] text-[#555] tabular">
             <div className="whitespace-nowrap">№ {r.documentNo}</div>
-            <div>{en ? dayKey(issued) : formatDateNumeric(issued)}</div>
+            <div>{en ? dateEn(issued) : formatDateNumeric(issued)}</div>
           </div>
         </header>
 
@@ -90,12 +100,13 @@ export function CertificateView({ r, student, group, faculty, transcript, url, q
             <>
               <p>
                 This is to certify that <b>{tr(student.lastName).toUpperCase()} {tr(student.firstName)}</b>, born{" "}
-                {birth.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" })}, is a full-time{" "}
+                {dateEn(birth)}, is a full-time{" "}
                 <b>{group.course}{["st", "nd", "rd"][group.course - 1] ?? "th"}-year</b> Bachelor’s student of the {FACULTY_EN[faculty.id] ?? faculty.name}, programme {group.programCode}, in the academic year{" "}
                 {sem.academicYear}/{sem.academicYear + 1}.
               </p>
               <p>
-                Expected graduation: {studyEnd}. The student is permitted to travel to <b>{r.fields.country}</b> from {r.fields.travelFrom} to {r.fields.travelTo}; the travel does not interfere with the academic schedule.
+                Expected graduation: {dateEn(mskDate(student.enrollmentYear + 4, 7, 31))}. The student is permitted to travel to <b>{countryEn(r.fields.country ?? "")}</b> from{" "}
+                {fieldDateEn(r.fields.travelFrom)} to {fieldDateEn(r.fields.travelTo)}; the travel does not interfere with the academic schedule.
               </p>
               <p>This certificate is issued upon the student’s request for submission to the consular authorities.</p>
             </>

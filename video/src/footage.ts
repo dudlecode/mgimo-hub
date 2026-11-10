@@ -84,16 +84,22 @@ const ease = Easing.inOut(Easing.sin);
 
 export type CamView = { s: number; tx: number; ty: number };
 
-/** Камера в координатах кадра: масштаб и сдвиг меняются плавно и одновременно, без скачков на пике. */
+/**
+ * Камера в координатах кадра: масштаб и сдвиг меняются плавно и одновременно.
+ * Каждый ключ ведёт камеру из того положения, где она была в момент его начала. Если следующий
+ * ключ начался раньше, чем закончился этот, он подхватывает камеру с полпути, без скачка.
+ */
 export function camAt(frame: number, keys: CamKey[]): CamView {
   let cur: CamView = { s: 1, tx: 0, ty: 0 };
-  for (const k of [...keys].sort((a, b) => a.at - b.at)) {
+  const sorted = [...keys].sort((a, b) => a.at - b.at);
+  for (let i = 0; i < sorted.length; i++) {
+    const k = sorted[i];
     if (frame <= k.at) break;
-    const p = ease(Math.min(1, (frame - k.at) / (k.d ?? 40)));
+    const next = sorted[i + 1];
+    const until = next && next.at < frame ? next.at : frame;
+    const p = ease(Math.min(1, (until - k.at) / (k.d ?? 40)));
     const t = camTranslate(k);
-    const next = { s: cur.s + (k.s - cur.s) * p, tx: cur.tx + (t.tx - cur.tx) * p, ty: cur.ty + (t.ty - cur.ty) * p };
-    if (p < 1) return next;
-    cur = { s: k.s, tx: t.tx, ty: t.ty };
+    cur = { s: cur.s + (k.s - cur.s) * p, tx: cur.tx + (t.tx - cur.tx) * p, ty: cur.ty + (t.ty - cur.ty) * p };
   }
   return cur;
 }
@@ -116,26 +122,32 @@ export function resolveCam(keys: CamKey[]): CamKey[] {
   return out;
 }
 
-/** Сдвиг контента: точка фокуса тянется к центру, края не открываются. */
+/**
+ * Доля высоты записи, видимая в окне браузера. Окно шире и выше кадра и уходит за его нижний край,
+ * поэтому камера считает центром и нижней границей не всю запись, а видимую полосу.
+ */
+export const VIEW_H = 0.81;
+
+/** Сдвиг контента: точка фокуса тянется к центру видимой полосы, края не открываются. */
 export function camTranslate(c: CamState) {
-  const pull = 1;
-  const tx = Math.min(0, Math.max(1 - c.s, c.x + (0.5 - c.x) * pull - c.x * c.s));
-  const ty = Math.min(0, Math.max(1 - c.s, c.y + (0.5 - c.y) * pull - c.y * c.s));
+  const tx = Math.min(0, Math.max(1 - c.s, 0.5 - c.x * c.s));
+  const ty = Math.min(0, Math.max(VIEW_H - c.s, VIEW_H / 2 - c.y * c.s));
   return { tx, ty };
 }
 
 /** Ключ камеры на рамку элемента */
 export function focus(at: number, box: Box | null, opts: { max?: number; fill?: number; d?: number; fallback?: CamState; until?: number; ring?: boolean; label?: string } = {}): CamKey {
   if (!box) {
-    const f = opts.fallback ?? { s: 1, x: 0.5, y: 0.5 };
+    const f = opts.fallback ?? { s: 1, x: 0.5, y: VIEW_H / 2 };
     return { at, ...f, d: opts.d, label: opts.label, until: opts.until };
   }
   // Блок целиком в кадре с полями: по ширине и по высоте
   const fill = opts.fill ?? 0.86;
-  const s = Math.max(1, Math.min(opts.max ?? 1.6, fill / box.w, fill / box.h));
-  // Обводка только у блока, который целиком на экране: обрезанная рамка выглядит неровно
-  const whole = box.y >= 0.01 && box.y + box.h <= 0.985 && box.x >= 0 && box.x + box.w <= 1;
+  const s = Math.max(1, Math.min(opts.max ?? 1.6, fill / box.w, (fill * VIEW_H) / box.h));
+  // Обводка у блока, который виден сверху и с боков. Блок может уходить за нижний край окна:
+  // окно само уходит за кадр, и низ рамки скрывается вместе с низом блока.
+  const whole = box.y >= 0.01 && box.x >= 0 && box.x + box.w <= 1;
   return { at, s, x: box.x + box.w / 2, y: box.y + box.h / 2, d: opts.d, box: opts.ring === false || !whole ? null : box, until: opts.until, label: opts.label, anchor: box };
 }
 
-export const home = (at: number, d?: number): CamKey => ({ at, s: 1, x: 0.5, y: 0.5, d });
+export const home = (at: number, d?: number): CamKey => ({ at, s: 1, x: 0.5, y: VIEW_H / 2, d });

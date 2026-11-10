@@ -5,8 +5,10 @@
   "scripts": {
     "record": "cd .. && node video/record/record.mjs",
     "studio": "remotion studio",
-    "render": "remotion render MGIMOHub out/mgimo-hub-demo.mp4 --codec h264 --crf 18 --color-space bt709",
+    "render": "remotion render MGIMOHub out/mgimo-hub-demo.mp4 --codec h264 --crf 23 --color-space bt709",
     "still": "remotion still MGIMOHub",
+    "stills": "node record/stills.mjs",
+    "shots": "cd .. && node video/record/shots.mjs",
     "check:camera": "../node_modules/.bin/tsx record/jerk-check.tsx"
   },
   "dependencies": {

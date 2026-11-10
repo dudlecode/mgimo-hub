@@ -12,6 +12,14 @@ const BASE = process.env.BASE ?? "http://127.0.0.1:3100";
 const OUT = resolve("video/public/footage");
 const TMP = resolve(process.env.REC_TMP ?? "video/.frames");
 const ONLY = process.argv.slice(2);
+/** Тема записи: THEME=light снимает кабинет в светлой теме (так собран ролик), иначе в тёмной */
+const LIGHT = process.env.THEME === "light";
+/**
+ * Сдвиг часов браузера, мс. Нужен, когда сервер записи запущен со сдвинутым временем
+ * (например, запись вечером, а в кадре должен быть учебный день): карточка «Сейчас идёт»
+ * после гидрации считает время по часам браузера.
+ */
+const TIME_SHIFT_MS = Number(process.env.TIME_SHIFT_MS || 0);
 mkdirSync(OUT, { recursive: true });
 
 const DESKTOP = { width: 1280, height: 800 };
@@ -122,7 +130,7 @@ function pageOverlay(mode) {
   else install();
 }
 
-async function newContext(browser, { phone = false, light = false, en = false, intro = false } = {}) {
+async function newContext(browser, { phone = false, light = LIGHT, en = false, intro = false } = {}) {
   const ctx = await browser.newContext({
     baseURL: BASE,
     viewport: phone ? PHONE : DESKTOP,
@@ -146,6 +154,25 @@ async function newContext(browser, { phone = false, light = false, en = false, i
     },
     [light, intro],
   );
+  if (TIME_SHIFT_MS) {
+    await ctx.addInitScript((off) => {
+      const Real = Date;
+      window.Date = new Proxy(Real, {
+        construct: (target, args, newTarget) => (args.length ? Reflect.construct(target, args, newTarget) : Reflect.construct(target, [Real.now() + off], newTarget)),
+        apply: () => new Real(Real.now() + off).toString(),
+        get: (target, prop, receiver) => (prop === "now" ? () => Real.now() + off : Reflect.get(target, prop, receiver)),
+      });
+    }, TIME_SHIFT_MS);
+  }
+  await ctx.addInitScript(() => {
+    const add = () => {
+      const st = document.createElement("style");
+      st.textContent = "#qr span.break-all, #qr span.break-all + br { display: none !important; }";
+      document.head.appendChild(st);
+    };
+    if (document.head) add();
+    else document.addEventListener("DOMContentLoaded", add);
+  });
   await ctx.addInitScript(pageOverlay, phone ? "touch" : "mouse");
   if (en) {
     const host = new URL(BASE).hostname;
@@ -304,6 +331,14 @@ async function settle(page, ms = 900) {
 const card = (page, text, minW) => page.evaluate(([t, w]) => window.__card(t, w), [text, minW ?? 220]);
 const sectionCard = (page, title) => page.evaluate((t) => window.__sectionCard(t), title);
 const boxUp = (loc, minW, minH = 40) => loc.evaluate((el, [w, h]) => window.__up(el, w, h), [minW, minH]).catch(() => null);
+/** Общая рамка нескольких элементов */
+const union = (...boxes) => {
+  const v = boxes.filter(Boolean);
+  if (!v.length) return null;
+  const x = Math.min(...v.map((b) => b.x));
+  const y = Math.min(...v.map((b) => b.y));
+  return { x, y, width: Math.max(...v.map((b) => b.x + b.width)) - x, height: Math.max(...v.map((b) => b.y + b.height)) - y };
+};
 const boxOf = async (loc) => {
   const b = await loc.boundingBox().catch(() => null);
   return b && { x: b.x, y: b.y, width: b.width, height: b.height };
@@ -518,9 +553,16 @@ async function clipStudent(browser, state) {
   await nudge(page);
   await settle(page, 600);
   await rec.mark("form", await boxOf(page.locator("main form").first()));
-  await sleep(3600);
+  await sleep(2200);
+  // что подставилось само: страна из разговора и данные профиля
+  const profile = await card(page, "Данные из профиля");
+  if (profile) {
+    await hover(page, page.getByText("Данные из профиля").first(), 500);
+    await rec.mark("form-profile", profile);
+    await sleep(3200);
+  }
 
-  // Дозаполнить то, что модель не подставила
+  // Студенту остаётся указать даты и цель поездки
   const country = page.locator('input[name="country"]');
   if (await country.count()) {
     if (!(await country.inputValue())) {
@@ -529,12 +571,21 @@ async function clipStudent(browser, state) {
     }
     const from = page.locator('input[name="travelFrom"]');
     const to = page.locator('input[name="travelTo"]');
-    if (!(await from.inputValue())) await from.fill("2026-12-20");
-    if (!(await to.inputValue())) await to.fill("2026-12-30");
     const purpose = page.locator('select[name="purpose"]');
+    await hover(page, from, 500);
+    await rec.mark("dates-start");
+    if (!(await from.inputValue())) await from.fill("2026-12-20");
+    await sleep(700);
+    await hover(page, to, 300);
+    if (!(await to.inputValue())) await to.fill("2026-12-30");
+    await sleep(700);
+    await hover(page, purpose, 300);
     if (!(await purpose.inputValue())) await purpose.selectOption("tourism");
+    await sleep(500);
+    await rec.mark("dates", union(await boxOf(from), await boxOf(to), await boxOf(purpose)));
+    await sleep(3000);
   }
-  await sleep(800);
+  await sleep(400);
   const submit = page.locator('form:has(input[name="type"]) button[type="submit"]');
   await hover(page, submit, 500);
   await rec.mark("submit", await boxOf(submit));
@@ -607,10 +658,11 @@ async function clipStaff(browser, state) {
     await page.getByText("Сообщение от учебного офиса").first().waitFor({ timeout: 20_000 }).catch(() => {});
     await sleep(1600);
   }
-  await act("Начать подготовку", "Готовится", "preparing");
-  await sleep(2000);
-  await act("Сформировать справку с QR", "Готова", "ready");
-  await sleep(4200);
+  // справка формируется одним нажатием, без промежуточного шага
+  await act("Сразу сформировать справку", "Готова", "ready");
+  const toast = page.locator("[data-sonner-toast]").first();
+  if (await toast.count()) await rec.mark("ready-toast", await boxOf(toast));
+  await sleep(4400);
 
   await page.goto("/staff/analytics");
   await nudge(page);
@@ -644,26 +696,35 @@ async function clipResult(browser, state) {
 
   await go(page, "/documents");
   await rec.mark("documents");
-  await sleep(1800);
-  const sc = page.locator("#student-card");
-  if (await sc.count()) {
-    await hover(page, sc, 400);
-    await rec.mark("student-card", await boxOf(sc));
-    await sleep(3200);
-  }
-  const verify = page.locator('main a[href^="/verify/"]').first();
-  await hover(page, verify, 700);
+  await sleep(1400);
+  const verifyHref = await page.locator('main a[href^="/verify/"]').first().getAttribute("href");
+  const tile = page.locator("main a").filter({ hasText: "Справка для посольства" }).first();
+  await hover(page, tile, 700);
   await rec.mark("doc-tile", await card(page, "Справка для посольства"));
-  await sleep(2600);
-  const href = await verify.getAttribute("href");
-  await click(page, verify, { wait: 200 });
-  await page.waitForURL(/\/verify\//, { timeout: 15_000 }).catch(async () => {
-    await page.goto(href);
-  });
+  await sleep(2400);
+
+  // сама справка: текст, подпись, печать и QR
+  await click(page, tile, { wait: 200 });
+  await page.waitForURL(/\/requests\/[0-9a-f-]{36}\/document/, { timeout: 15_000 });
+  await nudge(page);
+  await settle(page, 900);
+  const paper = page.locator("main article").first();
+  await moveTo(page, 1040, 300, 14);
+  await rec.mark("certificate", union(await boxOf(paper.locator("header").first()), await boxOf(paper.locator("h1").first()), await boxOf(paper.locator("div.font-serif").first())));
+  await sleep(4600);
+  const qr = page.locator("#qr");
+  await bringIntoView(page, qr);
+  await settle(page, 300);
+  await hover(page, qr, 500);
+  await rec.mark("certificate-qr", await boxOf(paper.locator("footer").first()));
+  await sleep(4000);
+
+  // проверка подлинности по коду из QR: открытая страница, вход не нужен
+  await page.goto(verifyHref);
   await nudge(page);
   await settle(page, 700);
   await rec.mark("verify", await card(page, "Документ подлинный", 300));
-  await sleep(5000);
+  await sleep(4800);
   await rec.stop();
 }
 
@@ -703,7 +764,8 @@ async function clipPhone(browser) {
 }
 
 async function clipPhoneEn(browser) {
-  const ctx = await newContext(browser, { phone: true, light: true, en: true });
+  // второй телефон в противоположной теме: в кадре видны обе
+  const ctx = await newContext(browser, { phone: true, light: !LIGHT, en: true });
   const page = await ctx.newPage();
   await apiLogin(page, "anna");
   await page.goto("/");

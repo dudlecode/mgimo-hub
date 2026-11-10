@@ -1,18 +1,26 @@
 import React from "react";
 import { AbsoluteFill, interpolate, OffthreadVideo, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { C, H, MONO, SANS, W } from "./theme";
-import { camAt, camTranslate, placeSegs, resolveCam, XF, type Box, type CamKey, type PlacedSeg, type Seg } from "./footage";
+import { camAt, placeSegs, resolveCam, VIEW_H, XF, type Box, type CamKey, type PlacedSeg, type Seg } from "./footage";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-// ── фон: почти чёрный, мягкое пятно света и плёночное зерно ──
-export const Background: React.FC<{ glowX?: number; glowY?: number; glow?: number }> = ({ glowX = 62, glowY = 50, glow = 0.09 }) => {
+// ── фон: светлая сцена, мягкое пятно света, точечная сетка и плёночное зерно ──
+export const Background: React.FC<{ glowX?: number; glowY?: number }> = ({ glowX = 50, glowY = 38 }) => {
+  // фон неподвижен: у каждой сцены свой счёт кадров, и любое движение фона на стыке сцен давало бы сдвиг
+  const grid = "radial-gradient(900px 560px at 50% 50%, #000 30%, transparent 100%)";
   return (
     <AbsoluteFill style={{ background: C.bg }}>
+      <AbsoluteFill style={{ background: `radial-gradient(1200px 720px at ${glowX}% ${glowY}%, #ffffff 0%, rgba(255,255,255,0) 70%)` }} />
       <AbsoluteFill
-        style={{ background: `radial-gradient(1100px 760px at ${glowX}% ${glowY}%, rgba(47,84,235,${glow}), rgba(10,10,10,0) 70%)` }}
+        style={{
+          backgroundImage: "radial-gradient(rgba(10,10,10,0.06) 1.2px, transparent 1.5px)",
+          backgroundSize: "36px 36px",
+          backgroundPosition: "18px 18px",
+          WebkitMaskImage: grid,
+          maskImage: grid,
+        }}
       />
-      <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%)" }} />
     </AbsoluteFill>
   );
 };
@@ -26,8 +34,8 @@ export const Grain: React.FC = () => {
       style={{
         backgroundImage: `url(${staticFile("grain.png")})`,
         backgroundPosition: `${ox}px ${oy}px`,
-        opacity: 0.05,
-        mixBlendMode: "overlay",
+        opacity: 0.045,
+        mixBlendMode: "multiply",
         pointerEvents: "none",
       }}
     />
@@ -172,19 +180,20 @@ const Callout: React.FC<{ frame: number; k: CalloutKey; c: { s: number }; tx: nu
   const ry = a.y * c.s + ty;
   const rw = a.w * c.s;
   const rh = a.h * c.s;
-  const cw = (52 + k.label.length * 15.6) / pxW;
-  const ch = 76 / pxH;
-  const gap = 34 / pxW;
+  const cw = (60 + k.label.length * 16.8) / pxW;
+  const ch = 84 / pxH;
+  const gap = 36 / pxW;
+  // границы считаются по видимой полосе окна: его низ уходит за край кадра
   const vx0 = Math.max(rx, 0.02);
   const vx1 = Math.min(rx + rw, 0.98);
   const vy0 = Math.max(ry, 0.03);
-  const vy1 = Math.min(ry + rh, 0.97);
+  const vy1 = Math.min(ry + rh, VIEW_H - 0.03);
   let side: "right" | "left" | "below" | "above";
   if (1 - vx1 >= cw + gap + 0.02) side = "right";
   else if (vx0 >= cw + gap + 0.02) side = "left";
-  else if (1 - vy1 >= ch + 0.06) side = "below";
+  else if (VIEW_H - vy1 >= ch + 0.07) side = "below";
   else side = "above";
-  const cy = Math.min(0.9 - ch, Math.max(0.06, (vy0 + vy1) / 2 - ch / 2));
+  const cy = Math.min(VIEW_H - 0.05 - ch, Math.max(0.05, (vy0 + vy1) / 2 - ch / 2));
   const pos =
     side === "right"
       ? { left: vx1 + gap, top: cy }
@@ -210,7 +219,7 @@ const Callout: React.FC<{ frame: number; k: CalloutKey; c: { s: number }; tx: nu
             left: `${line.left * 100}%`,
             top: `${line.top * 100}%`,
             width: `${line.width * 100 * p}%`,
-            height: 2,
+            height: 3,
             background: C.brand,
             opacity: out,
           }}
@@ -221,16 +230,16 @@ const Callout: React.FC<{ frame: number; k: CalloutKey; c: { s: number }; tx: nu
           position: "absolute",
           left: `${pos.left * 100}%`,
           top: `${pos.top * 100}%`,
-          padding: "16px 24px",
-          borderRadius: 16,
+          padding: "19px 28px",
+          borderRadius: 18,
           background: C.brand,
           color: "#fff",
           fontFamily: SANS,
-          fontSize: 28,
-          fontWeight: 600,
+          fontSize: 30,
+          fontWeight: 560,
           lineHeight: 1.22,
-          letterSpacing: "-0.015em",
-          boxShadow: "0 18px 50px rgba(47,84,235,0.45)",
+          letterSpacing: "-0.02em",
+          boxShadow: "0 22px 56px rgba(47,84,235,0.40)",
           opacity: p * out,
           transform: `translate(${shift}px, ${shiftY}px) scale(${0.92 + p * 0.08})`,
           transformOrigin: side === "left" ? "right center" : side === "right" ? "left center" : "center",
@@ -266,9 +275,16 @@ function overlays(keys: CamKey[], segEnd: number) {
   return { rings, callouts };
 }
 
+/** Проявление первого плана сцены из белого окна, кадров */
+const FIRST_FADE = 12;
+/** Уход плана в белое перед новым планом, кадров */
+const DIP_OUT = 6;
+
 /**
- * Живая запись. У каждого куска своя камера, как у отдельного плана в монтаже:
- * на склейке старый план растворяется в своём наезде, новый начинается с общего плана.
+ * Живая запись. У каждого куска своя камера, как у отдельного плана в монтаже.
+ * На склейке двух разных планов старый уходит в белое, а новый проявляется из белого: на светлом
+ * интерфейсе наложение двух кадров с разным масштабом двоится и выглядит как рывок.
+ * Куски cont (тот же план после сжатой паузы) склеиваются обычным наплывом: камера у них общая.
  * Быстрые сбросы камеры (ключи s=1 короче 16 кадров) отбрасываются, чтобы ничего не дёргалось.
  */
 export const Footage: React.FC<{ segs: Seg[]; cam?: CamKey[]; offset?: number; unit?: number; pxW?: number }> = ({ segs, cam = [], offset = 0, unit = 1, pxW = 1280 }) => {
@@ -276,7 +292,7 @@ export const Footage: React.FC<{ segs: Seg[]; cam?: CamKey[]; offset?: number; u
   const placed = placeSegs(segs);
   const keys = [...cam].filter((k) => !(k.s === 1 && (k.d ?? 40) < 16)).sort((a, b) => a.at - b.at);
   return (
-    <AbsoluteFill style={{ overflow: "hidden", background: "#0b0b0b" }}>
+    <AbsoluteFill style={{ overflow: "hidden", background: "#ffffff" }}>
       {placed.map((seg, i) => {
         // начало плана: первый кусок цепочки cont
         let first = i;
@@ -289,7 +305,15 @@ export const Footage: React.FC<{ segs: Seg[]; cam?: CamKey[]; offset?: number; u
         const active = frame >= seg.start - 1 && frame < seg.start + seg.d;
         const c = camAt(frame, segKeys);
         const { tx, ty } = c;
-        const fade = i > 0 ? interpolate(frame, [seg.start, seg.start + XF], [0, 1], clamp) : 1;
+        const next = placed[i + 1];
+        const fadeIn =
+          i === 0
+            ? interpolate(frame, [0, FIRST_FADE], [0, 1], clamp)
+            : seg.cont
+              ? interpolate(frame, [seg.start, seg.start + XF], [0, 1], clamp)
+              : interpolate(frame, [seg.start + DIP_OUT, seg.start + XF + 2], [0, 1], clamp);
+        const fadeOut = next && !next.cont ? interpolate(frame, [next.start, next.start + DIP_OUT], [1, 0], clamp) : 1;
+        const fade = fadeIn * fadeOut;
         const { rings, callouts } = overlays(segKeys, last === placed.length - 1 ? placed[last].start + placed[last].d : placed[last + 1].start);
         return (
           <AbsoluteFill key={i} style={{ opacity: active ? fade : 0 }}>
@@ -320,10 +344,10 @@ export const Footage: React.FC<{ segs: Seg[]; cam?: CamKey[]; offset?: number; u
                         top: `${y * 100}%`,
                         width: `${w * 100}%`,
                         height: `${h * 100}%`,
-                        border: `3px solid ${C.brand}`,
+                        border: `3.5px solid ${C.brand}`,
                         borderRadius: (RING_RADIUS + RING_OUT) * c.s * unit,
                         opacity: o,
-                        boxShadow: "0 0 0 5px rgba(47,84,235,0.16), 0 0 40px rgba(47,84,235,0.25)",
+                        boxShadow: "0 0 0 8px rgba(47,84,235,0.13), 0 16px 50px rgba(47,84,235,0.24)",
                       }}
                     />
                   );
@@ -342,27 +366,26 @@ export const BrowserFrame: React.FC<{ x: number; y: number; w: number; children:
   const { fps } = useVideoConfig();
   const p = spring({ frame: f - delay, fps, config: { damping: 200 }, durationInFrames: 30 });
   const h = (w * 800) / 1280;
-  const drift = Math.sin(f / 70) * 3;
   return (
     <div
       style={{
         position: "absolute",
         left: x,
-        top: y + (1 - p) * 70 + drift,
+        top: y + (1 - p) * 70,
         width: w,
         opacity: p,
         transform: `perspective(2400px) rotateX(${(1 - p) * 16}deg) scale(${0.93 + p * 0.07})`,
         transformOrigin: "50% 100%",
-        borderRadius: 18,
+        borderRadius: 22,
         overflow: "hidden",
-        background: "#141414",
-        border: `1px solid ${C.line}`,
-        boxShadow: "0 50px 140px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02)",
+        background: "#ffffff",
+        border: "1px solid rgba(10,10,10,0.10)",
+        boxShadow: C.shadow,
       }}
     >
-      <div style={{ height: 46, display: "flex", alignItems: "center", padding: "0 18px", gap: 9, borderBottom: "1px solid #1f1f1f", position: "relative" }}>
+      <div style={{ height: 50, display: "flex", alignItems: "center", padding: "0 20px", gap: 9, background: "#fbfbfa", borderBottom: "1px solid #e7e7e4", position: "relative" }}>
         {[0, 1, 2].map((i) => (
-          <div key={i} style={{ width: 13, height: 13, borderRadius: 99, background: "#2c2c2c" }} />
+          <div key={i} style={{ width: 13, height: 13, borderRadius: 99, background: "#d6d6d2" }} />
         ))}
         <div
           style={{
@@ -370,18 +393,15 @@ export const BrowserFrame: React.FC<{ x: number; y: number; w: number; children:
             left: "50%",
             transform: "translateX(-50%)",
             height: 28,
-            padding: "0 18px",
-            borderRadius: 8,
-            background: "#1c1c1c",
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 9,
             fontFamily: SANS,
             fontSize: 16,
-            color: "#9a9a9a",
+            color: "#7a7a77",
           }}
         >
-          <LogoMark size={16} color="#cfcfcf" bg="#1c1c1c" />
+          <LogoMark size={17} color="#0a0a0a" bg="#fbfbfa" />
           MGIMO Hub
         </div>
       </div>
@@ -415,9 +435,9 @@ export const PhoneFrame: React.FC<{ x: number; y: number; w: number; children: R
         width: w + bezel * 2,
         padding: bezel,
         borderRadius: 64,
-        background: "#1a1a1a",
-        border: "1px solid #2e2e2e",
-        boxShadow: "0 60px 140px rgba(0,0,0,0.65)",
+        background: "#0c0c0c",
+        border: "1px solid #0c0c0c",
+        boxShadow: "0 50px 120px rgba(22,34,80,0.24), 0 10px 30px rgba(22,34,80,0.10)",
         opacity: p,
         transform: `rotate(${tilt}deg)`,
       }}
@@ -443,8 +463,8 @@ export const Chip: React.FC<{ children: React.ReactNode; delay?: number; accent?
         gap: 12,
         padding: "14px 24px",
         borderRadius: 14,
-        border: `1px solid ${accent ? "rgba(47,84,235,0.55)" : C.line}`,
-        background: accent ? "rgba(47,84,235,0.12)" : "rgba(20,20,20,0.8)",
+        border: `1px solid ${accent ? "rgba(47,84,235,0.45)" : C.line}`,
+        background: accent ? "rgba(47,84,235,0.08)" : "#ffffff",
         fontFamily: SANS,
         fontSize: 30,
         color: C.ink,
@@ -470,5 +490,6 @@ export const CountUp: React.FC<{ value: number; delay?: number; duration?: numbe
 
 export const SceneFade: React.FC<{ children: React.ReactNode }> = ({ children }) => <AbsoluteFill>{children}</AbsoluteFill>;
 
-export const FRAME = { x: 250, w: 1420, y: 120 };
+/** Окно браузера: по центру под заголовком главы, нижний край уходит за кадр */
+export const FRAME = { x: 180, w: 1560, y: 236 };
 export const CANVAS = { W, H };

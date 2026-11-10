@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>MGIMO Hub: доступ для жюри</title>
+<style>
+  @font-face { font-family: "Geist"; src: url("../report/fonts/geist-cyrillic-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: "Geist"; src: url("../report/fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Geist Mono"; src: url("../report/fonts/geist-mono-cyrillic-wght-normal.woff2") format("woff2"); font-weight: 100 900; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: "Geist Mono"; src: url("../report/fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  :root { --ink: #0a0a0a; --ink-2: #3d3d3d; --ink-3: #6b6b6b; --line: #e3e3e3; --soft: #f5f5f5; --brand: #2f54eb; --brand-soft: #eef2fe; }
+  @page { size: A4; margin: 13mm 15mm 11mm; }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Geist", system-ui, sans-serif; font-size: 9.4pt; line-height: 1.45; color: var(--ink); width: 180mm; }
+  .mono, code { font-family: "Geist Mono", ui-monospace, monospace; }
+  code { font-size: 0.9em; background: var(--soft); border-radius: 4px; padding: 0.05em 0.35em; }
+  a { color: inherit; text-decoration: none; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 9px; font-size: 14pt; letter-spacing: -0.03em; }
+  .brand b { font-weight: 650; } .brand span { color: var(--ink-3); }
+  .tag { font-family: "Geist Mono"; font-size: 8pt; color: var(--brand); }
+  h1 { margin-top: 7mm; font-size: 28pt; line-height: 1.04; letter-spacing: -0.045em; font-weight: 650; }
+  .lead { margin-top: 2.5mm; font-size: 11pt; color: var(--ink-2); line-height: 1.4; }
+
+  .link { margin-top: 5.5mm; display: flex; align-items: center; justify-content: space-between; gap: 8mm; background: #0a0a0a; color: #ededed; border-radius: 14px; padding: 5.5mm 7mm; }
+  .link .eyebrow { font-family: "Geist Mono"; font-size: 8pt; color: #9db1ff; }
+  .link .url { display: block; margin-top: 2mm; font-family: "Geist Mono"; font-size: 16.5pt; font-weight: 500; letter-spacing: -0.02em; color: #ffffff; }
+  .link p { margin-top: 2.2mm; font-size: 9pt; color: #b5b5b5; max-width: 118mm; }
+  .qr { flex: none; width: 27mm; height: 27mm; padding: 2.1mm; border-radius: 9px; background: #ffffff; }
+  .qr svg { display: block; width: 100%; height: 100%; }
+
+  h2 { margin-top: 6mm; font-size: 13pt; font-weight: 650; letter-spacing: -0.02em; }
+  .hint { margin-top: 1.2mm; color: var(--ink-3); font-size: 9pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 3mm; }
+  th { text-align: left; font-family: "Geist Mono"; font-weight: 500; font-size: 7.6pt; color: var(--ink-3); padding: 0 3mm 1.6mm 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 1.9mm 3mm 1.9mm 0; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  td b { font-weight: 600; } td span { font-size: 8.4pt; color: var(--ink-3); margin-left: 2mm; }
+  td.mono { font-size: 9.4pt; white-space: nowrap; }
+  td.look { color: var(--ink-2); font-size: 9pt; padding-right: 0; }
+  tr.group td { padding: 2.6mm 0 0.6mm; border-bottom: 0; font-family: "Geist Mono"; font-size: 7.6pt; color: var(--brand); }
+
+  .steps { margin-top: 2.6mm; display: grid; grid-template-columns: 1fr 1fr; gap: 2.2mm 7mm; }
+  .step { display: flex; gap: 3mm; break-inside: avoid; }
+  .step i { flex: none; width: 6mm; height: 6mm; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-style: normal; font-family: "Geist Mono"; font-size: 8pt; display: grid; place-items: center; margin-top: 0.3mm; }
+  .step b { display: block; font-weight: 600; } .step span { display: block; color: var(--ink-2); font-size: 8.9pt; line-height: 1.42; }
+
+  .facts { margin-top: 6mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; border-top: 1px solid var(--ink); padding-top: 3.5mm; }
+  .facts b { display: block; font-weight: 600; font-size: 9.4pt; } .facts span { display: block; color: var(--ink-3); font-size: 8.4pt; line-height: 1.4; }
+  .foot { margin-top: 4mm; display: flex; justify-content: space-between; gap: 8mm; font-size: 8pt; color: var(--ink-3); }
+  .foot .mono { color: var(--ink-2); white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand"><svg width="26" height="26" viewBox="0 0 24 24"><rect width="24" height="24" rx="6.5" fill="#0a0a0a"/><path d="M5.5 17.5V11.25a3.25 3.25 0 0 1 6.5 0V17.5M12 11.25a3.25 3.25 0 0 1 6.5 0V17.5" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18.6" cy="5.6" r="1.55" fill="#ffffff"/></svg><div><b>MGIMO</b> <span>Hub</span></div></div>
+    <div class="tag">Доступ для жюри · хакатон «Цифровой деканат будущего»</div>
+  </div>
+
+  <h1>Ссылка и тестовые аккаунты</h1>
+  <p class="lead">Личный кабинет студента, рабочее место учебного офиса и ИИ-ассистент «Атташе».</p>
+
+  <div class="link">
+    <div>
+      <div class="eyebrow">Прототип</div>
+      <a class="url" href="https://34-88-153-35.sslip.io">34-88-153-35.sslip.io</a>
+      <p>Открывается из России и СНГ без VPN, с компьютера и с телефона. На странице входа любой аккаунт открывается одним касанием, пароль вводить не нужно.</p>
+    </div>
+    <div class="qr"><svg viewBox="0 0 29 29" shape-rendering="crispEdges"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM11 0h1v1h-1zM13 0h1v1h-1zM14 0h1v1h-1zM15 0h1v1h-1zM19 0h1v1h-1zM22 0h1v1h-1zM23 0h1v1h-1zM24 0h1v1h-1zM25 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM11 1h1v1h-1zM13 1h1v1h-1zM14 1h1v1h-1zM15 1h1v1h-1zM16 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM9 2h1v1h-1zM13 2h1v1h-1zM15 2h1v1h-1zM17 2h1v1h-1zM18 2h1v1h-1zM19 2h1v1h-1zM20 2h1v1h-1zM22 2h1v1h-1zM24 2h1v1h-1zM25 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM10 3h1v1h-1zM14 3h1v1h-1zM15 3h1v1h-1zM17 3h1v1h-1zM18 3h1v1h-1zM20 3h1v1h-1zM22 3h1v1h-1zM24 3h1v1h-1zM25 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h1v1h-1zM11 4h1v1h-1zM12 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM17 4h1v1h-1zM19 4h1v1h-1zM22 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM11 5h1v1h-1zM12 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM20 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM23 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM8 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM9 8h1v1h-1zM11 8h1v1h-1zM12 8h1v1h-1zM16 8h1v1h-1zM18 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM26 8h1v1h-1zM0 9h1v1h-1zM1 9h1v1h-1zM3 9h1v1h-1zM5 9h1v1h-1zM7 9h1v1h-1zM9 9h1v1h-1zM11 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM15 9h1v1h-1zM19 9h1v1h-1zM22 9h1v1h-1zM23 9h1v1h-1zM24 9h1v1h-1zM28 9h1v1h-1zM2 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM11 10h1v1h-1zM12 10h1v1h-1zM13 10h1v1h-1zM14 10h1v1h-1zM15 10h1v1h-1zM16 10h1v1h-1zM17 10h1v1h-1zM19 10h1v1h-1zM20 10h1v1h-1zM21 10h1v1h-1zM24 10h1v1h-1zM2 11h1v1h-1zM3 11h1v1h-1zM4 11h1v1h-1zM5 11h1v1h-1zM7 11h1v1h-1zM8 11h1v1h-1zM11 11h1v1h-1zM13 11h1v1h-1zM15 11h1v1h-1zM22 11h1v1h-1zM25 11h1v1h-1zM27 11h1v1h-1zM0 12h1v1h-1zM1 12h1v1h-1zM2 12h1v1h-1zM3 12h1v1h-1zM6 12h1v1h-1zM9 12h1v1h-1zM12 12h1v1h-1zM14 12h1v1h-1zM15 12h1v1h-1zM17 12h1v1h-1zM18 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM23 12h1v1h-1zM25 12h1v1h-1zM26 12h1v1h-1zM0 13h1v1h-1zM2 13h1v1h-1zM3 13h1v1h-1zM4 13h1v1h-1zM7 13h1v1h-1zM10 13h1v1h-1zM12 13h1v1h-1zM15 13h1v1h-1zM16 13h1v1h-1zM19 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM28 13h1v1h-1zM0 14h1v1h-1zM1 14h1v1h-1zM3 14h1v1h-1zM4 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM8 14h1v1h-1zM12 14h1v1h-1zM21 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM26 14h1v1h-1zM0 15h1v1h-1zM1 15h1v1h-1zM5 15h1v1h-1zM8 15h1v1h-1zM10 15h1v1h-1zM14 15h1v1h-1zM16 15h1v1h-1zM17 15h1v1h-1zM18 15h1v1h-1zM20 15h1v1h-1zM23 15h1v1h-1zM24 15h1v1h-1zM27 15h1v1h-1zM1 16h1v1h-1zM2 16h1v1h-1zM3 16h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM12 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM26 16h1v1h-1zM0 17h1v1h-1zM5 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM13 17h1v1h-1zM14 17h1v1h-1zM15 17h1v1h-1zM21 17h1v1h-1zM23 17h1v1h-1zM24 17h1v1h-1zM28 17h1v1h-1zM0 18h1v1h-1zM2 18h1v1h-1zM4 18h1v1h-1zM5 18h1v1h-1zM6 18h1v1h-1zM8 18h1v1h-1zM9 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM12 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM17 18h1v1h-1zM21 18h1v1h-1zM22 18h1v1h-1zM23 18h1v1h-1zM0 19h1v1h-1zM4 19h1v1h-1zM7 19h1v1h-1zM9 19h1v1h-1zM10 19h1v1h-1zM11 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM24 19h1v1h-1zM26 19h1v1h-1zM27 19h1v1h-1zM0 20h1v1h-1zM3 20h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM6 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM14 20h1v1h-1zM15 20h1v1h-1zM18 20h1v1h-1zM19 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM11 21h1v1h-1zM12 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM18 21h1v1h-1zM19 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM0 22h1v1h-1zM1 22h1v1h-1zM2 22h1v1h-1zM3 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM18 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM26 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM8 23h1v1h-1zM10 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM16 23h1v1h-1zM18 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM26 23h1v1h-1zM0 24h1v1h-1zM2 24h1v1h-1zM3 24h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM11 24h1v1h-1zM12 24h1v1h-1zM16 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM26 24h1v1h-1zM0 25h1v1h-1zM2 25h1v1h-1zM3 25h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM8 25h1v1h-1zM9 25h1v1h-1zM11 25h1v1h-1zM12 25h1v1h-1zM14 25h1v1h-1zM15 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM22 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM27 25h1v1h-1zM0 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM8 26h1v1h-1zM12 26h1v1h-1zM14 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM20 26h1v1h-1zM21 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM25 26h1v1h-1zM26 26h1v1h-1zM27 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM10 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM14 27h1v1h-1zM15 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM22 27h1v1h-1zM25 27h1v1h-1zM26 27h1v1h-1zM27 27h1v1h-1zM0 28h1v1h-1zM1 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM15 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1z" fill="#0a0a0a"/></svg></div>
+  </div>
+
+  <h2>Тестовые аккаунты</h2>
+  <p class="hint">Три студента с разными данными и два сотрудника с разной областью видимости. Все люди, оценки и документы вымышлены.</p>
+  <table>
+    <tr><th style="width:32%">Кто</th><th style="width:17%">Логин</th><th style="width:18%">Пароль</th><th>Что посмотреть</th></tr>
+    <tr class="group"><td colspan="4">Студенты</td></tr>
+    <tr><td><b>Анна</b><span>МО, 3 курс, бюджет</span></td><td class="mono">student.anna</td><td class="mono">Demo-Anna-26</td><td class="look">идущая пара, переносы, справка с QR</td></tr>
+    <tr><td><b>Тимур</b><span>МЭО, 2 курс, договор</span></td><td class="mono">student.timur</td><td class="mono">Demo-Timur-26</td><td class="look">долг, пересдача, оплата обучения</td></tr>
+    <tr><td><b>Лейла</b><span>ФЛМК, 1 курс</span></td><td class="mono">student.leyla</td><td class="mono">Demo-Leyla-26</td><td class="look">пустые состояния кабинета</td></tr>
+    <tr class="group"><td colspan="4">Учебный офис</td></tr>
+    <tr><td><b>Студенческий офис</b></td><td class="mono">staff.office</td><td class="mono">Demo-Office-26</td><td class="look">очередь всех факультетов, справки</td></tr>
+    <tr><td><b>Учебный офис МЭО</b></td><td class="mono">staff.meo</td><td class="mono">Demo-Meo-26</td><td class="look">видит только свой факультет</td></tr>
+  </table>
+
+  <h2>Маршрут на пять минут</h2>
+  <div class="steps">
+    <div class="step"><i>1</i><div><b>Войдите как <code>student.anna</code></b><span>«Сегодня»: идущая пара, изменения, дедлайны.</span></div></div>
+    <div class="step"><i>2</i><div><b>Откройте «Помощник»</b><span>«Нужна справка для визы в Италию»: готов черновик.</span></div></div>
+    <div class="step"><i>3</i><div><b>Отправьте справку из «Заявок»</b><span>Форма заполнена из профиля, видны статус и срок.</span></div></div>
+    <div class="step"><i>4</i><div><b>Войдите как <code>staff.office</code></b><span>Возьмите заявку в работу, сформируйте справку.</span></div></div>
+    <div class="step"><i>5</i><div><b>Вернитесь к <code>student.anna</code></b><span>Уведомление пришло, справка с QR в «Документах».</span></div></div>
+    <div class="step"><i>6</i><div><b>Подставьте в адрес чужой номер заявки</b><span>«Страница не найдена»: чужое не открывается.</span></div></div>
+  </div>
+
+  <div class="facts">
+    <div><b>Ссылка проверена 10.11.2026</b><span>Отвечает из России и Казахстана, HTTPS до февраля 2027.</span></div>
+    <div><b>Все пять аккаунтов действуют</b><span>Пароли сверены с базой сервера, блокировок нет.</span></div>
+    <div><b>Данные можно менять</b><span>Это демо-данные, реальных людей они не затрагивают.</span></div>
+  </div>
+  <div class="foot">
+    <span>Это не официальный сервис МГИМО: логотип университета не используется, у продукта свой знак.</span>
+    <span class="mono">Код: github.com/dudlecode/mgimo-hub</span>
+  </div>
+</body>
+</html>

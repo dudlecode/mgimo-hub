@@ -16,6 +16,7 @@
     "ai:check": "tsx scripts/ai-check.ts",
     "test:e2e": "playwright test",
     "report": "node scripts/build-report.mjs",
+    "access": "node scripts/build-access.mjs",
     "readme:images": "node scripts/readme-images.mjs"
   },
   "dependencies": {

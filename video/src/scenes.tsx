@@ -1,9 +1,9 @@
 import React from "react";
-import { AbsoluteFill, Img, interpolate, OffthreadVideo, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import QRCode from "qrcode";
 import { C, FPS, MONO, SANS, SITE_URL } from "./theme";
 import { frameOf, focus, hasMark, home, mb, mt, segsFrames, segStart, type CamKey, type ClipName, type Seg } from "./footage";
-import { Background, BrowserFrame, Chip, CountUp, Eyebrow, Footage, FRAME, Grain, Headline, LogoMark, PhoneFrame, Rise, Wordmark } from "./ui";
+import { Background, BrowserFrame, Chip, CountUp, Footage, FRAME, Grain, LogoMark, PhoneFrame, Rise, Wordmark } from "./ui";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 const sec = (s: number) => Math.round(s * FPS);
@@ -11,47 +11,56 @@ const sec = (s: number) => Math.round(s * FPS);
 export type Scene = { id: string; frames: number; Component: React.FC; demo?: boolean };
 /** Текст новой сцены появляется после склейки */
 const TEXT_IN = 12;
-/** Пауза перед первым кадром записи, кадров */
-const LEAD = 10;
+/** Пауза перед первым кадром записи, кадров: запись проявляется, когда склейка сцен уже закончилась */
+const LEAD = 14;
 
 /** Для проверки: где в сценах показываются обводки */
 export const RING_DEBUG: { id: string; keys: { at: number; d?: number; box: boolean; until?: number }[] }[] = [];
 export const CAM_DEBUG: { id: string; segs: Seg[]; cam: CamKey[] }[] = [];
 
-/** Глава сверху: номер и название, не меняются по ходу сцены */
-const ChapterTag: React.FC<{ chapter: string; title: string; left?: number; top?: number }> = ({ chapter, title, left = FRAME.x, top = 50 }) => (
-  <div style={{ position: "absolute", left, top, display: "flex", alignItems: "baseline", gap: 22 }}>
-    <Rise delay={TEXT_IN} y={14}>
-      <div style={{ fontFamily: MONO, fontSize: 26, color: C.brandText }}>{chapter}</div>
-    </Rise>
-    <Rise delay={TEXT_IN + 4} y={14}>
-      <div style={{ fontFamily: SANS, fontSize: 40, fontWeight: 620, color: C.ink, letterSpacing: "-0.03em" }}>{title}</div>
-    </Rise>
+/** Надпись над заголовком: номер и название главы */
+const Label: React.FC<{ children: React.ReactNode; delay?: number; out?: number }> = ({ children, delay = TEXT_IN, out }) => (
+  <Rise delay={delay} out={out} y={14}>
+    <div style={{ fontFamily: MONO, fontSize: 24, color: C.brandText, letterSpacing: "0.02em" }}>{children}</div>
+  </Rise>
+);
+
+type Title = { at: number; text: string };
+
+/** Заголовок главы над окном: по центру. Заголовков может быть несколько, они сменяют друг друга на своих кадрах */
+const ChapterTag: React.FC<{ chapter: string; titles: Title[] }> = ({ chapter, titles }) => (
+  <div style={{ position: "absolute", left: 0, right: 0, top: 58, textAlign: "center" }}>
+    <Label>{chapter}</Label>
+    <div style={{ position: "relative", height: 80, marginTop: 12 }}>
+      {titles.map((t, i) => (
+        <div key={t.text} style={{ position: "absolute", left: 0, right: 0, top: 0 }}>
+          <Rise delay={i === 0 ? TEXT_IN + 4 : t.at} out={titles[i + 1] ? titles[i + 1].at - 10 : undefined} y={18}>
+            <div style={{ fontFamily: SANS, fontSize: 66, fontWeight: 620, color: C.ink, letterSpacing: "-0.04em", lineHeight: 1.06 }}>{t.text}</div>
+          </Rise>
+        </div>
+      ))}
+    </div>
   </div>
 );
 
-/** Сцена с живой записью: крупный браузер по центру, пояснения плашками у блоков */
-function demoScene(opts: { id: string; segs: Seg[]; chapter: string; title: string; cam?: CamKey[]; chain?: boolean }): Scene {
+/** Сцена с живой записью: крупное окно по центру, пояснения плашками у блоков */
+function demoScene(opts: { id: string; segs: Seg[]; chapter: string; title: string | Title[]; cam?: CamKey[]; chain?: boolean }): Scene {
   const frames = segsFrames(opts.segs) + LEAD;
-  CAM_DEBUG.push({ id: opts.id, segs: opts.segs, cam: (opts.cam ?? []).map((k) => ({ ...k, at: k.at + LEAD, until: k.until !== undefined ? k.until + LEAD : undefined })) });
-  RING_DEBUG.push({ id: opts.id, keys: (opts.cam ?? []).map((k) => ({ at: k.at + LEAD, d: k.d, box: !!k.box, until: k.until !== undefined ? k.until + LEAD : undefined })) });
+  const titles = typeof opts.title === "string" ? [{ at: 0, text: opts.title }] : opts.title.map((t) => ({ ...t, at: t.at + LEAD }));
+  const cam = (opts.cam ?? []).map((k) => ({ ...k, at: k.at + LEAD, until: k.until !== undefined ? k.until + LEAD : undefined }));
+  CAM_DEBUG.push({ id: opts.id, segs: opts.segs, cam });
+  RING_DEBUG.push({ id: opts.id, keys: cam.map((k) => ({ at: k.at, d: k.d, box: !!k.box, until: k.until })) });
   const Component: React.FC = () => {
     const f = useCurrentFrame();
     const exit = interpolate(f, [frames - 18, frames - 6], [1, 0], clamp);
     return (
       <AbsoluteFill>
-        <Background glowX={50} glowY={60} />
+        <Background glowX={50} glowY={46} />
         <div style={{ opacity: exit }}>
-          <ChapterTag chapter={opts.chapter} title={opts.title} />
+          <ChapterTag chapter={opts.chapter} titles={titles} />
         </div>
         <BrowserFrame x={FRAME.x} y={FRAME.y} w={FRAME.w} delay={opts.chain ? -300 : 0}>
-          <Footage
-            segs={opts.segs}
-            cam={(opts.cam ?? []).map((k) => ({ ...k, at: k.at + LEAD, until: k.until !== undefined ? k.until + LEAD : undefined }))}
-            offset={LEAD}
-            unit={FRAME.w / 1280}
-            pxW={FRAME.w}
-          />
+          <Footage segs={opts.segs} cam={cam} offset={LEAD} unit={FRAME.w / 1280} pxW={FRAME.w} />
         </BrowserFrame>
         <Grain />
       </AbsoluteFill>
@@ -63,305 +72,215 @@ function demoScene(opts: { id: string; segs: Seg[]; chapter: string; title: stri
 /** Кадр метки с поправкой; если метки нет, запасное значение */
 const fo = (segs: Seg[], clip: ClipName, mark: string, offset = 0, fallback = 0) => (hasMark(clip, mark) ? frameOf(segs, clip, mark, offset) : fallback);
 
-/** Живые чернила со страницы входа как фон */
-const InkBackdrop: React.FC<{ dim?: number; from?: number }> = ({ dim = 0.5, from = 2.4 }) => {
-  const s = 1 / 0.56;
-  return (
-    <AbsoluteFill style={{ background: C.bg }}>
-      <AbsoluteFill style={{ transformOrigin: "0 0", transform: `translate(-0.4%, ${((1 - s) / 2) * 100}%) scale(${s})` }}>
-        <OffthreadVideo
-          src={staticFile("footage/intro.mp4")}
-          trimBefore={sec(from)}
-          playbackRate={0.6}
-          muted
-          style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(2px) contrast(1.05)" }}
-        />
-      </AbsoluteFill>
-      <AbsoluteFill style={{ background: `rgba(10,10,10,${dim})` }} />
-      <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 50%, rgba(10,10,10,0) 35%, rgba(10,10,10,0.92) 100%)" }} />
-    </AbsoluteFill>
-  );
-};
-
 // ─────────────────────────────────────────────────────────────
-// Вступление и проблема одной сценой на общем фоне с чернилами:
-// знак проявляется и уходит, следом пять мест сливаются в одно окно
+// Вступление и проблема одной сценой: знак, затем пять мест,
+// где сейчас живёт учёба, собираются в одно окно
 // ─────────────────────────────────────────────────────────────
-const INTRO = sec(2.7);
+const INTRO = sec(2.6);
 const PROBLEM_LEN = INTRO + sec(10.6);
 const CARDS = [
-  { t: "Расписание", s: "сайт и чат группы", x: 1060, y: 240, r: -4 },
-  { t: "Баллы", s: "у каждого преподавателя", x: 1440, y: 330, r: 3 },
-  { t: "Справки", s: "очередь в деканате", x: 1120, y: 530, r: 2 },
-  { t: "Новости", s: "почта и каналы", x: 1480, y: 630, r: -3 },
-  { t: "Вопросы", s: "староста и знакомые", x: 1170, y: 790, r: -2 },
+  { t: "Расписание", s: "сайт и чат группы", x: 110, y: 540, r: -4 },
+  { t: "Баллы", s: "у каждого преподавателя", x: 470, y: 720, r: 3 },
+  { t: "Справки", s: "очередь в деканате", x: 775, y: 520, r: -2 },
+  { t: "Новости", s: "почта и каналы", x: 1100, y: 730, r: 4 },
+  { t: "Вопросы", s: "староста и знакомые", x: 1430, y: 550, r: -3 },
 ];
+const CARD_W = 380;
 const MERGE = INTRO + sec(5.7);
 const Problem: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  // знак в начале
-  const logoIn = spring({ frame: f - 6, fps, config: { damping: 200 }, durationInFrames: 36 });
-  const logoOut = interpolate(f, [INTRO - 22, INTRO - 2], [0, 1], { ...clamp, easing: (t) => t * t });
-  const dimIn = interpolate(f, [0, 20], [1, 0], clamp);
-  const darker = interpolate(f, [INTRO - 20, INTRO + 10], [0, 1], clamp);
+  const logoIn = spring({ frame: f - 6, fps, config: { damping: 200 }, durationInFrames: 34 });
+  const logoOut = interpolate(f, [INTRO - 20, INTRO - 2], [0, 1], { ...clamp, easing: (t) => t * t });
   const m = spring({ frame: f - MERGE, fps, config: { damping: 200 }, durationInFrames: 36 });
   const win = spring({ frame: f - MERGE - 14, fps, config: { damping: 200 }, durationInFrames: 36 });
+  const headline = (label: string, title: React.ReactNode, sub: string, at: number, out?: number) => (
+    <div style={{ position: "absolute", left: 0, right: 0, top: 150, textAlign: "center" }}>
+      <Label delay={at} out={out}>
+        {label}
+      </Label>
+      <Rise delay={at + 4} out={out} y={30}>
+        <div style={{ fontFamily: SANS, fontSize: 104, fontWeight: 620, color: C.ink, letterSpacing: "-0.048em", lineHeight: 1.03, marginTop: 20 }}>{title}</div>
+      </Rise>
+      <Rise delay={at + 22} out={out}>
+        <div style={{ fontFamily: SANS, fontSize: 36, color: C.ink2, marginTop: 28, letterSpacing: "-0.015em" }}>{sub}</div>
+      </Rise>
+    </div>
+  );
   return (
     <AbsoluteFill>
-      <InkBackdrop dim={0.32} />
-      <AbsoluteFill style={{ background: `rgba(10,10,10,${darker * 0.2})` }} />
-      <AbsoluteFill style={{ background: C.bg, opacity: dimIn }} />
+      <Background glowX={50} glowY={44} />
       {/* знак */}
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: logoIn * (1 - logoOut) }}>
-        <div style={{ transform: `scale(${0.92 + logoIn * 0.08 - logoOut * 0.06})`, filter: `blur(${(1 - logoIn) * 10 + logoOut * 8}px)` }}>
-          <Wordmark size={86} />
+        <div style={{ transform: `scale(${0.92 + logoIn * 0.08 - logoOut * 0.05})`, filter: `blur(${(1 - logoIn) * 10 + logoOut * 8}px)` }}>
+          <Wordmark size={96} />
         </div>
       </AbsoluteFill>
-      <div style={{ position: "absolute", left: 120, top: 330, width: 820 }}>
-        <Rise delay={INTRO + 4} out={MERGE - 8}>
-          <div style={{ fontFamily: MONO, fontSize: 26, color: C.brandText, marginBottom: 22 }}>Проблема</div>
-        </Rise>
-        <Headline size={84} delay={INTRO + 8} out={MERGE - 8}>
-          Учёба разбросана по&nbsp;пяти местам
-        </Headline>
-        <Rise delay={INTRO + sec(1.6)} out={MERGE - 8}>
-          <div style={{ fontFamily: SANS, fontSize: 36, color: C.ink2, marginTop: 30, lineHeight: 1.3, width: 720 }}>А за каждой справкой нужно идти в очередь</div>
-        </Rise>
-      </div>
+      {headline("Проблема", "Учёба разбросана по пяти местам", "А за каждой справкой нужно идти в очередь", INTRO, MERGE - 8)}
       {CARDS.map((c, i) => {
-        const p = spring({ frame: f - INTRO - 14 - i * 8, fps, config: { damping: 200 }, durationInFrames: 30 });
-        const fx = Math.sin((f + i * 40) / 38) * 10;
-        const fy = Math.cos((f + i * 25) / 44) * 8;
-        const tx = 1340 - 185;
-        const ty = 560 - 60;
-        const x = c.x + fx + (tx - c.x) * m;
-        const y = c.y + fy + (ty - c.y) * m;
+        const p = spring({ frame: f - INTRO - 16 - i * 7, fps, config: { damping: 200 }, durationInFrames: 30 });
+        const fx = Math.sin((f + i * 40) / 38) * 9;
+        const fy = Math.cos((f + i * 25) / 44) * 7;
+        const tx = 960 - CARD_W / 2;
+        const ty = 690;
+        const x = c.x + fx * (1 - m) + (tx - c.x) * m;
+        const y = c.y + fy * (1 - m) + (ty - c.y) * m;
         return (
           <div
             key={c.t}
             style={{
               position: "absolute",
               left: x,
-              top: y + (1 - p) * 40,
-              width: 370,
-              padding: "24px 28px",
-              borderRadius: 18,
-              background: "rgba(19,19,19,0.92)",
+              top: y + (1 - p) * 50,
+              width: CARD_W,
+              padding: "30px 34px",
+              borderRadius: 22,
+              background: C.card,
               border: `1px solid ${C.line}`,
               opacity: p * (1 - m),
-              transform: `rotate(${c.r * (1 - m)}deg) scale(${1 - m * 0.4})`,
-              boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+              transform: `rotate(${c.r * (1 - m)}deg) scale(${1 - m * 0.35})`,
+              boxShadow: C.shadowSoft,
             }}
           >
-            <div style={{ fontFamily: SANS, fontSize: 36, fontWeight: 600, color: C.ink, letterSpacing: "-0.02em" }}>{c.t}</div>
-            <div style={{ fontFamily: SANS, fontSize: 26, color: C.ink3, marginTop: 6 }}>{c.s}</div>
+            <div style={{ fontFamily: SANS, fontSize: 44, fontWeight: 600, color: C.ink, letterSpacing: "-0.035em" }}>{c.t}</div>
+            <div style={{ fontFamily: SANS, fontSize: 27, color: C.ink3, marginTop: 8 }}>{c.s}</div>
           </div>
         );
       })}
+      {/* одно окно */}
       <div
         style={{
           position: "absolute",
-          left: 1340 - 330,
-          top: 560 - 210,
-          width: 660,
-          height: 420,
-          borderRadius: 26,
-          border: "1px solid #333",
-          background: "rgba(16,16,16,0.94)",
+          left: 960 - 430,
+          top: 560,
+          width: 860,
+          height: 330,
+          borderRadius: 28,
+          border: "1px solid rgba(10,10,10,0.10)",
+          background: C.card,
           opacity: win,
-          transform: `scale(${0.86 + win * 0.14})`,
+          transform: `scale(${0.88 + win * 0.12})`,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 30,
-          boxShadow: "0 60px 160px rgba(0,0,0,0.6), 0 0 120px rgba(47,84,235,0.14)",
+          gap: 34,
+          boxShadow: C.shadow,
         }}
       >
-        <Wordmark size={60} />
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", width: 560 }}>
+        <Wordmark size={64} />
+        <div style={{ display: "flex", gap: 12 }}>
           {["Расписание", "Баллы", "Справки", "Новости", "Атташе"].map((t, i) => (
             <Rise key={t} delay={MERGE + 30 + i * 5} y={10}>
-              <div style={{ fontFamily: SANS, fontSize: 26, color: C.ink2, padding: "8px 16px", borderRadius: 10, border: `1px solid ${C.line}` }}>{t}</div>
+              <div style={{ fontFamily: SANS, fontSize: 26, color: i === 4 ? C.brand : C.ink2, padding: "9px 18px", borderRadius: 12, border: `1px solid ${i === 4 ? "rgba(47,84,235,0.4)" : C.line}`, background: i === 4 ? "rgba(47,84,235,0.06)" : "transparent" }}>{t}</div>
             </Rise>
           ))}
         </div>
       </div>
-      <div style={{ position: "absolute", left: 120, top: 330, width: 760 }}>
-        <Rise delay={MERGE + 6}>
-          <div style={{ fontFamily: MONO, fontSize: 26, color: C.brandText, marginBottom: 22 }}>Решение</div>
-        </Rise>
-        <Headline size={84} delay={MERGE + 10}>
-          Одно окно для всей учёбы
-        </Headline>
-        <Rise delay={MERGE + 26}>
-          <div style={{ fontFamily: SANS, fontSize: 36, color: C.ink2, marginTop: 30, lineHeight: 1.3 }}>Кабинет студента, рабочее место деканата и ИИ-ассистент</div>
-        </Rise>
-      </div>
+      {headline("Решение", "Одно окно для всей учёбы", "Кабинет студента, рабочее место учебного офиса и ИИ-ассистент", MERGE + 6)}
       <Grain />
     </AbsoluteFill>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
-// Карточки глав «Было / Стало»: зачёркивание, 3D-въезд и блик
+// Титр главы во весь кадр: как было (зачёркивается) и как стало
 // ─────────────────────────────────────────────────────────────
-const BA_LEN = sec(5.8);
-function beforeAfter(id: string, chapter: string, title: string, before: string, after: string, how: string): Scene {
+const CARD_LEN = sec(5.4);
+function chapterCard(id: string, chapter: string, was: string, line1: string, line2: string, sub: string): Scene {
   const Component: React.FC = () => {
     const f = useCurrentFrame();
-    const { fps } = useVideoConfig();
-    const AFTER_AT = 54;
-    const b = spring({ frame: f - 14, fps, config: { damping: 200 }, durationInFrames: 28 });
-    const a = spring({ frame: f - AFTER_AT, fps, config: { damping: 18, stiffness: 120, mass: 0.9 }, durationInFrames: 40 });
-    const strike = interpolate(f, [AFTER_AT - 16, AFTER_AT + 4], [0, 1], clamp);
-    const dim = interpolate(f, [AFTER_AT, AFTER_AT + 22], [1, 0.4], clamp);
-    const sweep = interpolate(f, [AFTER_AT + 16, AFTER_AT + 48], [-0.6, 1.6], clamp);
-    const exit = interpolate(f, [BA_LEN - 16, BA_LEN - 4], [1, 0], clamp);
-    const zoom = interpolate(f, [BA_LEN - 18, BA_LEN], [1, 1.06], clamp);
-    const drift = Math.sin(f / 50) * 4;
+    const WAS_AT = 14;
+    const STRIKE_AT = 38;
+    const L1_AT = 46;
+    const L2_AT = 58;
+    const SUB_AT = 78;
+    const strike = interpolate(f, [STRIKE_AT, STRIKE_AT + 14], [0, 1], { ...clamp, easing: (t) => 1 - Math.pow(1 - t, 3) });
+    const dim = interpolate(f, [STRIKE_AT + 4, STRIKE_AT + 22], [1, 0.62], clamp);
+    const exit = interpolate(f, [CARD_LEN - 16, CARD_LEN - 4], [1, 0], clamp);
+    const zoom = interpolate(f, [0, CARD_LEN], [1, 1.035], clamp);
     return (
       <AbsoluteFill>
-        <InkBackdrop dim={0.8} />
-        <AbsoluteFill style={{ opacity: exit, transform: `scale(${zoom})` }}>
-          <div style={{ position: "absolute", left: 160, top: 150, width: 1500 }}>
-            <Eyebrow delay={TEXT_IN}>{chapter}</Eyebrow>
-            <Headline size={80} delay={TEXT_IN + 4}>
-              {title}
-            </Headline>
-          </div>
-          <div
-            style={{
-              position: "absolute",
-              left: 160,
-              top: 400 + (1 - b) * 50 + drift,
-              width: 760,
-              padding: "40px 48px",
-              borderRadius: 26,
-              background: "rgba(18,18,18,0.92)",
-              border: `1px solid ${C.line}`,
-              opacity: b * dim,
-              transform: `rotate(${-2.2 * b}deg) scale(${1 - (1 - dim) * 0.08})`,
-              transformOrigin: "left center",
-              boxShadow: "0 40px 100px rgba(0,0,0,0.55)",
-            }}
-          >
-            <div style={{ fontFamily: MONO, fontSize: 24, color: C.ink3, letterSpacing: "0.02em" }}>Было</div>
-            <div
-              style={{
-                fontFamily: SANS,
-                fontSize: 44,
-                color: C.ink2,
-                marginTop: 18,
-                lineHeight: 1.22,
-                letterSpacing: "-0.02em",
-                textDecorationLine: "line-through",
-                textDecorationThickness: 3,
-                textDecorationColor: `rgba(230,90,90,${strike * 0.9})`,
-              }}
-            >
-              {before}
+        <Background glowX={50} glowY={46} />
+        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center", opacity: exit, transform: `scale(${zoom})` }}>
+          <Label>{chapter}</Label>
+          <Rise delay={WAS_AT} y={16} style={{ marginTop: 42 }}>
+            <div style={{ position: "relative", display: "inline-block", fontFamily: SANS, fontSize: 40, color: C.ink3, letterSpacing: "-0.02em", opacity: dim }}>
+              {was}
+              <div style={{ position: "absolute", left: -12, top: "54%", height: 3, borderRadius: 2, background: C.brand, width: `calc(${strike * 100}% + ${strike * 24}px)` }} />
             </div>
-          </div>
-          <div
-            style={{
-              position: "absolute",
-              left: 820,
-              top: 520 + (1 - a) * 80 - drift,
-              width: 940,
-              padding: "44px 52px",
-              borderRadius: 28,
-              overflow: "hidden",
-              background: "linear-gradient(180deg, rgba(26,34,66,0.96), rgba(16,19,32,0.96))",
-              border: "1px solid rgba(47,84,235,0.65)",
-              opacity: Math.min(1, a * 1.4),
-              transform: `perspective(1800px) rotateY(${(1 - a) * -22}deg) rotateX(${(1 - a) * 8}deg) scale(${0.92 + a * 0.08})`,
-              transformOrigin: "left center",
-              boxShadow: "0 50px 140px rgba(0,0,0,0.6), 0 0 90px rgba(47,84,235,0.28)",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: `${sweep * 100}%`,
-                width: "35%",
-                background: "linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,0.13), rgba(255,255,255,0))",
-                pointerEvents: "none",
-              }}
-            />
-            <div style={{ fontFamily: MONO, fontSize: 24, color: C.brandText, letterSpacing: "0.02em" }}>Стало</div>
-            <div style={{ fontFamily: SANS, fontSize: 50, color: C.ink, marginTop: 18, lineHeight: 1.16, fontWeight: 600, letterSpacing: "-0.03em" }}>{after}</div>
-            <Rise delay={AFTER_AT + 18} y={12}>
-              <div style={{ fontFamily: SANS, fontSize: 30, color: "#aeb8dd", marginTop: 22, lineHeight: 1.3 }}>{how}</div>
+          </Rise>
+          <div style={{ marginTop: 36, fontFamily: SANS, fontSize: 132, lineHeight: 1.03, fontWeight: 620, letterSpacing: "-0.05em" }}>
+            <Rise delay={L1_AT} y={44}>
+              <div style={{ color: C.ink }}>{line1}</div>
+            </Rise>
+            <Rise delay={L2_AT} y={44}>
+              <div style={{ color: C.brand }}>{line2}</div>
             </Rise>
           </div>
+          <Rise delay={SUB_AT} y={16} style={{ marginTop: 44 }}>
+            <div style={{ fontFamily: SANS, fontSize: 34, color: C.ink2, letterSpacing: "-0.015em" }}>{sub}</div>
+          </Rise>
         </AbsoluteFill>
         <Grain />
       </AbsoluteFill>
     );
   };
-  return { id, frames: BA_LEN, Component };
+  return { id, frames: CARD_LEN, Component };
 }
 
 // ─────────────────────────────────────────────────────────────
 // 01 День
 // ─────────────────────────────────────────────────────────────
-function loginScene(): Scene {
-  const segs: Seg[] = [{ clip: "student", from: mt("student", "login-demo") - 1.0, to: mt("student", "today") + 0.2 }];
-  const fDemo = frameOf(segs, "student", "login-demo", -0.7);
+function dayScene(): Scene {
+  const deadlines = hasMark("student", "deadlines");
+  const segs: Seg[] = [{ clip: "student", from: mt("student", "login-demo") - 0.8, to: deadlines ? mt("student", "deadlines") + 3.2 : mt("student", "changes") + 3.4 }];
+  const fDemo = frameOf(segs, "student", "login-demo", -0.5);
   const fToday = frameOf(segs, "student", "today", -1.0);
-  return demoScene({
-    id: "login",
-    segs,
-    chapter: "01 · День",
-    title: "Один вход для всей учёбы",
-    cam: [
-      focus(fDemo, mb("student", "login-demo"), { max: 1.6, until: frameOf(segs, "student", "today", -2.0), label: "Для жюри: вход в одно касание" }),
-      home(fToday - 14, 30),
-    ],
-  });
-}
-
-function todayScene(): Scene {
-  const changes = hasMark("student", "changes");
-  const segs: Seg[] = [{ clip: "student", from: mt("student", "today") + 0.4, to: mt("student", changes ? "changes" : "now") + 3.4 }];
   const fNow = frameOf(segs, "student", "now", -0.5);
-  const fChanges = fo(segs, "student", "changes", -0.5, fNow + sec(4));
+  const fChanges = frameOf(segs, "student", "changes", -0.5);
   return demoScene({
-    id: "today",
-    chain: true,
+    id: "day",
     segs,
     chapter: "01 · День",
-    title: "Весь день на одном экране",
+    // вход и главный экран идут одной записью без склейки, меняется только заголовок
+    title: [
+      { at: 0, text: "Один вход для всей учёбы" },
+      { at: frameOf(segs, "student", "today", -0.4), text: "Весь день на одном экране" },
+    ],
     cam: [
-      focus(fNow, mb("student", "now"), { label: "Пара идёт: где и сколько до конца" }),
-      ...(changes ? [focus(fChanges, mb("student", "changes"), { label: "Переносы и замены подсвечены" })] : []),
+      focus(fDemo, mb("student", "login-demo"), { max: 1.5, until: frameOf(segs, "student", "today", -2.0), label: "Для жюри: вход в одно касание" }),
+      home(fToday - 14, 30),
+      focus(fNow, mb("student", "now"), { label: "Пара идёт: аудитория и время до конца" }),
+      focus(fChanges, mb("student", "changes"), { label: "Переносы и отмены видны сразу" }),
+      ...(deadlines ? [focus(frameOf(segs, "student", "deadlines", -0.4), mb("student", "deadlines"), { max: 1.45, label: "Дедлайны на две недели вперёд" })] : []),
     ],
   });
 }
 
 // ─────────────────────────────────────────────────────────────
-// 02 Справка: студент, деканат, результат
+// 02 Справка: студент просит, учебный офис оформляет, студент получает документ
 // ─────────────────────────────────────────────────────────────
 function attacheScene(): Scene {
   const ask = mt("student", "ask");
   const answer = mt("student", "answer");
   const wait = Math.max(0.5, answer - ask - 1.2);
   const segs: Seg[] = [
-    { clip: "student", from: mt("student", "assistant") + 0.9, to: ask + 1.2 },
-    { clip: "student", from: ask + 1.2, to: answer - 0.2, rate: Math.max(1, wait / 2.0), cont: true },
-    { clip: "student", from: answer - 0.2, to: answer + 3.0, cont: true },
-    { clip: "student", from: mt("student", "draft-button") - 1.7, to: mt("student", "draft-button") + 1.9 },
-    { clip: "student", from: mt("student", "form") - 0.3, to: mt("student", "form") + 1.8 },
-    { clip: "student", from: mt("student", "submit") - 1.0, to: mt("student", "submitted") + 2.8 },
+    // сразу к делу: курсор уже идёт к готовому вопросу
+    { clip: "student", from: ask - 2.2, to: ask + 1.0 },
+    { clip: "student", from: ask + 1.0, to: answer - 0.2, rate: Math.max(1, wait / 1.6), cont: true },
+    { clip: "student", from: answer - 0.2, to: answer + 3.4, cont: true },
+    { clip: "student", from: mt("student", "draft-button") - 1.5, to: mt("student", "draft-button") + 2.1 },
+    { clip: "student", from: mt("student", "form") - 0.3, to: mt("student", "form-profile") + 2.9 },
+    { clip: "student", from: mt("student", "dates-start") - 0.4, to: mt("student", "dates") + 2.7 },
+    { clip: "student", from: mt("student", "submit") - 1.0, to: mt("student", "submitted") + 3.2 },
   ];
   const fAnswer = segStart(segs, 2);
   const fDraft = segStart(segs, 3);
   const fForm = segStart(segs, 4);
-  const fSubmit = segStart(segs, 5);
+  const fProfile = frameOf(segs, "student", "form-profile", -0.5);
+  const fDates = segStart(segs, 5);
+  const fSubmit = segStart(segs, 6);
   const fSubmitted = frameOf(segs, "student", "submitted", -0.3);
   return demoScene({
     id: "attache",
@@ -369,15 +288,17 @@ function attacheScene(): Scene {
     chapter: "02 · Справка",
     title: "Справку готовит Атташе",
     cam: [
-      focus(fAnswer + 4, mb("student", "answer"), { max: 1.5, label: "Отвечает по вашим данным" }),
+      focus(fAnswer + 4, mb("student", "answer"), { max: 1.45, label: "Понял запрос и назвал нужную справку" }),
       home(fDraft - 6, 6),
-      focus(fDraft + 4, mb("student", "draft-button"), { max: 1.6, until: frameOf(segs, "student", "draft-button", 1.7), label: "Черновик заявки готов" }),
+      focus(fDraft + 2, mb("student", "draft-button"), { max: 1.5, until: frameOf(segs, "student", "draft-button", 2.0), label: "Готовит черновик заявки" }),
       home(fForm - 6, 6),
-      focus(fForm + 4, mb("student", "form"), { max: 1.3, label: "Поля уже заполнены" }),
+      focus(fProfile, mb("student", "form-profile"), { max: 1.4, label: "Данные из профиля уже в заявке" }),
+      home(fDates - 6, 6),
+      focus(fDates + 4, mb("student", "dates"), { max: 1.5, fill: 0.6, label: "Остаётся указать даты и цель" }),
       home(fSubmit - 6, 6),
-      focus(fSubmit + 4, mb("student", "submit"), { max: 1.5, until: frameOf(segs, "student", "submit", 1.9), label: "Отправляете вы сами" }),
+      focus(fSubmit + 4, mb("student", "submit"), { max: 1.45, until: frameOf(segs, "student", "submit", 1.9), label: "Отправляет заявку сам студент" }),
       home(fSubmitted - 20, 18),
-      focus(fSubmitted + 8, mb("student", "submitted"), { max: 1.55, label: "Статус как у посылки" }),
+      focus(fSubmitted + 8, mb("student", "submitted"), { max: 1.5, label: "Статус и срок видны сразу" }),
     ],
   });
 }
@@ -387,60 +308,66 @@ function staffScene(): Scene {
   const draft = mt("staff", "draft", draftAsk + 2);
   const item = mt("staff", "queue-item", mt("staff", "queue") + 2);
   const segs: Seg[] = [
-    { clip: "staff", from: item - 1.2, to: item + 2.5 },
-    { clip: "staff", from: mt("staff", "taken-click") - 0.5, to: mt("staff", "taken") + 0.3 },
+    { clip: "staff", from: item - 1.2, to: item + 2.4 },
+    { clip: "staff", from: mt("staff", "taken-click") - 0.5, to: mt("staff", "taken") + 0.6 },
     { clip: "staff", from: draftAsk - 0.2, to: draftAsk + 0.5 },
     { clip: "staff", from: draftAsk + 0.5, to: draft - 0.1, rate: Math.max(1, (draft - draftAsk - 0.6) / 1.2), cont: true },
-    { clip: "staff", from: draft - 0.1, to: draft + 2.2, cont: true },
-    { clip: "staff", from: mt("staff", "ready-click") - 0.5, to: mt("staff", "ready") + 1.8 },
+    { clip: "staff", from: draft - 0.1, to: draft + 2.8, cont: true },
+    { clip: "staff", from: mt("staff", "ready-click") - 0.6, to: mt("staff", "ready") + 3.0 },
   ];
   const fTaken = segStart(segs, 1);
   const fDraft = segStart(segs, 2);
   const fReady = segStart(segs, 5);
-  const fToast = frameOf(segs, "staff", "ready", -0.3);
+  const fToast = frameOf(segs, "staff", "ready", 0.1);
   const btn = (mark: string, f: number, untilOffset: number, label: string) =>
-    focus(f, mb("staff", mark), { max: 1.6, fill: 0.5, until: frameOf(segs, "staff", mark, untilOffset), label });
+    focus(f, mb("staff", mark), { max: 1.5, fill: 0.5, until: frameOf(segs, "staff", mark, untilOffset), label });
   return demoScene({
     id: "staff",
     chain: true,
     segs,
     chapter: "02 · Справка",
-    title: "Деканат не теряет заявки",
+    title: "Учебный офис не теряет заявки",
     cam: [
-      focus(6, mb("staff", "queue-item"), { max: 1.6, until: frameOf(segs, "staff", "queue-item", 2.3), label: "Заявка Анны уже в очереди" }),
+      focus(6, mb("staff", "queue-item"), { max: 1.5, until: frameOf(segs, "staff", "queue-item", 2.2), label: "Заявка Анны уже в очереди офиса" }),
       home(fTaken - 6, 6),
       btn("taken-click", fTaken + 2, 1.9, "В работу одним нажатием"),
       home(fDraft - 6, 6),
-      focus(fDraft + 2, mb("staff", "draft"), { max: 1.6, fill: 0.62, label: "Ответ студенту пишет Атташе" }),
+      focus(fDraft + 2, mb("staff", "draft"), { max: 1.7, fill: 0.7, label: "Ответ студенту готовит Атташе" }),
       home(fReady - 6, 6),
-      btn("ready-click", fReady + 2, 1.9, "Справка с QR в одно нажатие"),
-      { at: fToast, s: 1.25, x: 0.6, y: 0.3, d: 26 },
+      btn("ready-click", fReady + 2, 1.9, "Справка с номером и QR за одно нажатие"),
+      // уведомление наверху страницы: студент узнаёт о готовности сразу
+      hasMark("staff", "ready-toast") && mb("staff", "ready-toast")
+        ? focus(fToast, mb("staff", "ready-toast"), { max: 1.5, fill: 0.36 })
+        : { at: fToast, s: 1.2, x: 0.6, y: 0.26, d: 26 },
     ],
   });
 }
 
 function resultScene(): Scene {
   const segs: Seg[] = [
-    { clip: "result", from: mt("result", "bell") - 1.0, to: mt("result", "notifications") + 3.4 },
-    { clip: "result", from: mt("result", "doc-tile") - 2.2, to: mt("result", "doc-tile") + 2.0 },
-    { clip: "result", from: mt("result", "verify") - 0.3, to: mt("result", "verify") + 3.2 },
+    { clip: "result", from: mt("result", "bell") - 0.8, to: mt("result", "notifications") + 3.2 },
+    { clip: "result", from: mt("result", "doc-tile") - 1.6, to: mt("result", "doc-tile") + 2.3 },
+    // справка одним планом: сначала текст, затем камера уходит вниз к подписи, печати и QR
+    { clip: "result", from: mt("result", "certificate") - 0.4, to: mt("result", "certificate-qr") + 3.6 },
+    { clip: "result", from: mt("result", "verify") - 0.3, to: mt("result", "verify") + 3.6 },
   ];
   const fNotif = frameOf(segs, "result", "notifications", -0.2);
-  const fDocs = segStart(segs, 1);
-  const fTile = frameOf(segs, "result", "doc-tile", -1.6);
-  const fVerify = segStart(segs, 2);
+  const fTile = frameOf(segs, "result", "doc-tile", -1.2);
+  const fCert = segStart(segs, 2);
+  const fQr = frameOf(segs, "result", "certificate-qr", -1.0);
+  const fVerify = segStart(segs, 3);
   return demoScene({
     id: "result",
     chain: true,
     segs,
     chapter: "02 · Справка",
-    title: "Справка уже у студента",
+    title: "Готовая справка в кабинете",
     cam: [
-      focus(fNotif + 4, mb("result", "notifications"), { max: 1.6, fill: 0.8, label: "Уведомление пришло сразу" }),
-      home(fDocs - 8, 8),
-      focus(fTile, mb("result", "doc-tile"), { max: 1.6, until: frameOf(segs, "result", "doc-tile", 1.9), label: "Справка с QR без похода в деканат" }),
-      home(fVerify - 8, 8),
-      focus(fVerify + 10, mb("result", "verify"), { max: 1.55, label: "Посольство проверит её по QR" }),
+      focus(fNotif + 4, mb("result", "notifications"), { max: 1.5, fill: 0.8, label: "Уведомление пришло сразу" }),
+      focus(fTile, mb("result", "doc-tile"), { max: 1.5, until: frameOf(segs, "result", "doc-tile", 2.1), label: "Справка лежит в «Документах»" }),
+      focus(fCert + 8, mb("result", "certificate"), { max: 1.4, fill: 0.9, until: fQr - 4, label: "Справка для консульства на английском" }),
+      focus(fQr, mb("result", "certificate-qr"), { max: 1.5, fill: 0.8, label: "Подпись, печать и QR для проверки" }),
+      focus(fVerify + 10, mb("result", "verify"), { max: 1.5, label: "Подлинность проверяется по коду" }),
     ],
   });
 }
@@ -450,10 +377,10 @@ function resultScene(): Scene {
 // ─────────────────────────────────────────────────────────────
 function appointmentScene(): Scene {
   const segs: Seg[] = [
-    { clip: "services", from: mt("services", "topic") - 1.0, to: mt("services", "topic") + 2.2 },
-    { clip: "services", from: mt("services", "slot") - 1.3, to: mt("services", "slot") + 2.3 },
+    { clip: "services", from: mt("services", "topic") - 1.0, to: mt("services", "topic") + 2.6 },
+    { clip: "services", from: mt("services", "slot") - 1.3, to: mt("services", "slot") + 2.4 },
     { clip: "services", from: mt("services", "book") - 1.3, to: mt("services", "book") + 2.1 },
-    { clip: "services", from: mt("services", "ticket") - 0.2, to: mt("services", "ticket") + 3.0 },
+    { clip: "services", from: mt("services", "ticket") - 0.2, to: mt("services", "ticket") + 3.4 },
   ];
   const fTopic = frameOf(segs, "services", "topic", -0.7);
   const fSlot = segStart(segs, 1);
@@ -465,11 +392,11 @@ function appointmentScene(): Scene {
     chapter: "03 · Приём",
     title: "Приём без живой очереди",
     cam: [
-      focus(fTopic, mb("services", "topic"), { max: 1.5, until: frameOf(segs, "services", "topic", 1.9), label: "Тема обращения" }),
-      focus(fSlot + 2, mb("services", "slot"), { max: 1.5, until: frameOf(segs, "services", "slot", 2.1), label: "Свободное время" }),
-      focus(fBook + 2, mb("services", "book"), { max: 1.6, fill: 0.5, until: frameOf(segs, "services", "book", 1.9), label: "Одно нажатие" }),
+      focus(fTopic, mb("services", "topic"), { max: 1.45, until: frameOf(segs, "services", "topic", 2.3), label: "Тема заранее: офис подготовит документы" }),
+      focus(fSlot + 2, mb("services", "slot"), { max: 1.45, until: frameOf(segs, "services", "slot", 2.2), label: "Свободное время видно сразу" }),
+      focus(fBook + 2, mb("services", "book"), { max: 1.5, fill: 0.5, until: frameOf(segs, "services", "book", 1.9), label: "Запись в одно нажатие" }),
       home(fTicket - 8, 8),
-      focus(fTicket + 4, mb("services", "ticket"), { max: 1.45, label: "Талон с QR вместо очереди" }),
+      focus(fTicket + 4, mb("services", "ticket"), { max: 1.4, label: "Талон с кодом вместо живой очереди" }),
     ],
   });
 }
@@ -479,39 +406,37 @@ function sickScene(): Scene {
   const ask = mt("services", "letter-ask", mt("services", "affects") + 3);
   const letter = mt("services", "letter", ask + 2);
   const segs: Seg[] = [
-    { clip: "services", from: mt("services", "report") - 2.2, to: mt("services", "report") + 2.2 },
-    { clip: "services", from: mt("services", "on-leave") - 0.3, to: mt("services", "on-leave") + 3.4 },
-    { clip: "services", from: mt("services", "affects") - 0.3, to: mt("services", "affects") + 1.8 },
+    { clip: "services", from: mt("services", "report") - 2.2, to: mt("services", "report") + 2.1 },
+    { clip: "services", from: mt("services", "affects") - 0.6, to: mt("services", "affects") + 2.6 },
     ...(hasLetter
       ? [
           { clip: "services" as const, from: mt("services", "letter-btn") - 0.8, to: ask + 0.5 },
-          { clip: "services" as const, from: ask + 0.5, to: letter - 0.1, rate: Math.max(1, (letter - ask - 0.6) / 1.8), cont: true },
-          { clip: "services" as const, from: letter - 0.1, to: letter + 3.6, cont: true },
+          { clip: "services" as const, from: ask + 0.5, to: letter - 0.5, rate: Math.max(1, (letter - ask - 1.0) / 1.6), cont: true },
+          // письмо появляется со сдвигом страницы, поэтому это новый план, а не продолжение
+          { clip: "services" as const, from: letter - 0.1, to: letter + 4.0 },
         ]
       : []),
   ];
   const fReport = frameOf(segs, "services", "report", -1.7);
-  const fOnLeave = segStart(segs, 1);
-  const fAffects = segStart(segs, 2);
-  const fLetterBtn = hasLetter ? segStart(segs, 3) : fAffects + 60;
-  const fLetter = hasLetter ? segStart(segs, 5) : fAffects + 90;
+  const fAffects = segStart(segs, 1);
+  const fLetterBtn = hasLetter ? segStart(segs, 2) : fAffects + 60;
+  const fLetter = hasLetter ? segStart(segs, 4) : fAffects + 90;
   return demoScene({
     id: "sick",
     segs,
     chapter: "04 · Больничный",
-    title: "Заболели? Одно нажатие",
+    title: "Одно нажатие вместо беготни",
     cam: [
-      focus(fReport, mb("services", "report"), { max: 1.6, fill: 0.5, until: frameOf(segs, "services", "report", 1.9), label: "Офис узнает сразу" }),
-      home(fOnLeave - 8, 8),
-      focus(fOnLeave + 4, mb("services", "on-leave"), { max: 1.45, label: "Учебный офис уже в курсе" }),
+      focus(fReport, mb("services", "report"), { max: 1.5, fill: 0.5, until: frameOf(segs, "services", "report", 1.9), label: "Сообщить в день болезни" }),
       home(fAffects - 8, 8),
-      focus(fAffects + 4, mb("services", "affects"), { max: 1.35, label: "Затронутые пары и дедлайны" }),
+      // блок «Что это затрагивает» выше окна, поэтому рамка задана вручную: заголовок, сводка и первая дисциплина
+      focus(fAffects, { x: 0.225, y: 0.125, w: 0.725, h: 0.36 }, { max: 1.08, ring: false, label: "Видно, какие пары и дедлайны затронуты" }),
       ...(hasLetter
         ? [
             home(fLetterBtn - 6, 6),
-            focus(fLetterBtn + 2, mb("services", "letter-btn"), { max: 1.6, fill: 0.5, until: frameOf(segs, "services", "letter-btn", 1.9), label: "Атташе напишет письмо" }),
+            focus(fLetterBtn + 2, mb("services", "letter-btn"), { max: 1.5, fill: 0.5, until: frameOf(segs, "services", "letter-btn", 1.9), label: "Письмо преподавателю пишет Атташе" }),
             home(fLetter - 6, 6),
-            focus(fLetter + 2, mb("services", "letter"), { max: 1.45, label: "Письмо о переносе готово" }),
+            focus(fLetter + 8, mb("services", "letter"), { max: 1.4, label: "Остаётся проверить и отправить" }),
           ]
         : []),
     ],
@@ -533,21 +458,22 @@ const PhoneNote: React.FC<{ from: number; to: number; text: string; anchorX: num
     <div style={{ position: "absolute", ...pos, top: y, display: "flex", alignItems: "center", flexDirection: side === "left" ? "row" : "row-reverse", opacity: p * o }}>
       <div
         style={{
-          padding: "16px 24px",
-          borderRadius: 16,
+          padding: "19px 28px",
+          borderRadius: 18,
           background: C.brand,
           color: "#fff",
           fontFamily: SANS,
           fontSize: 30,
-          fontWeight: 600,
-          boxShadow: "0 18px 50px rgba(47,84,235,0.45)",
+          fontWeight: 560,
+          letterSpacing: "-0.02em",
+          boxShadow: "0 22px 56px rgba(47,84,235,0.40)",
           transform: `translateX(${(1 - p) * (side === "left" ? -16 : 16)}px)`,
           whiteSpace: "nowrap",
         }}
       >
         {text}
       </div>
-      <div style={{ width: 44 * p, height: 2, background: C.brand }} />
+      <div style={{ width: 44 * p, height: 3, background: C.brand }} />
     </div>
   );
 };
@@ -558,7 +484,8 @@ function phoneScene(): Scene {
   const enFrom = mt("phone-en", "today") - 0.3;
   const enTo = mt("phone-en", "schedule") + 3.0;
   const segsEn: Seg[] = [{ clip: "phone-en", from: enFrom, to: enTo, rate: Math.min(1.4, (enTo - enFrom) / ruSecs) }];
-  const frames = segsFrames(segsRu) + 16;
+  // сцена кончается вместе с записью левого телефона (она сдвинута на 4 кадра): иначе в конце его экран пустел бы
+  const frames = segsFrames(segsRu) + 4;
   const fSchedule = frameOf(segsRu, "phone", "schedule", -0.3) + 4;
   const fOffline = frameOf(segsRu, "phone", "offline", 0.2) + 4;
   const Component: React.FC = () => {
@@ -566,18 +493,19 @@ function phoneScene(): Scene {
     const exit = interpolate(f, [frames - 18, frames - 6], [1, 0], clamp);
     return (
       <AbsoluteFill>
-        <Background glowX={55} glowY={50} />
+        <Background glowX={50} glowY={52} />
         <div style={{ opacity: exit }}>
-          <ChapterTag chapter="05 · Телефон" title="Всё в кармане" left={160} />
-          <PhoneNote from={24} to={fSchedule - 4} text="Ставится как приложение" anchorX={672} y={430} side="left" />
-          <PhoneNote from={fSchedule} to={fOffline - 4} text="Расписание за секунду" anchorX={672} y={430} side="left" />
-          <PhoneNote from={fOffline} to={frames} text="Без сети откроется сохранённое" anchorX={672} y={300} side="left" />
-          <PhoneNote from={40} to={frames} text="English-интерфейс" anchorX={1500} y={660} side="right" />
+          <ChapterTag chapter="05 · Телефон" titles={[{ at: 0, text: "Кабинет в телефоне" }]} />
+          <PhoneNote from={24} to={fSchedule - 4} text="Ставится как приложение" anchorX={672} y={560} side="left" />
+          <PhoneNote from={fSchedule} to={fOffline - 4} text="Расписание за секунду" anchorX={672} y={560} side="left" />
+          <PhoneNote from={fOffline} to={frames} text="Без сети откроется сохранённое" anchorX={672} y={430} side="left" />
+          <PhoneNote from={40} to={frames} text="English и тёмная тема" anchorX={1500} y={760} side="right" />
         </div>
-        <PhoneFrame x={1110} y={150} w={360} delay={14} light tilt={4}>
+        {/* английский телефон снят в тёмной теме: в кадре видны обе */}
+        <PhoneFrame x={1110} y={310} w={360} delay={14} tilt={4}>
           <Footage segs={segsEn} offset={14} />
         </PhoneFrame>
-        <PhoneFrame x={690} y={86} w={380} delay={4} tilt={-2}>
+        <PhoneFrame x={690} y={246} w={380} delay={4} light tilt={-2}>
           <Footage segs={segsRu} offset={4} />
         </PhoneFrame>
         <Grain />
@@ -604,9 +532,9 @@ const Numbers: React.FC = () => {
   const rowAt = 16 + STATS.length * STAT_LEN;
   return (
     <AbsoluteFill>
-      <InkBackdrop dim={0.86} />
-      <div style={{ position: "absolute", left: 160, top: 90 }}>
-        <Eyebrow delay={TEXT_IN}>Что получилось</Eyebrow>
+      <Background glowX={50} glowY={48} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: 96, textAlign: "center" }}>
+        <Label>Что получилось</Label>
       </div>
       {STATS.map((st, i) => {
         const at = 16 + i * STAT_LEN;
@@ -614,24 +542,22 @@ const Numbers: React.FC = () => {
         const p = spring({ frame: f - at, fps, config: { damping: 200 }, durationInFrames: 20 });
         const o = interpolate(f, [at + STAT_LEN - 6, at + STAT_LEN + 4], [1, 0], clamp);
         const up = interpolate(f, [at + STAT_LEN - 6, at + STAT_LEN + 4], [0, -40], clamp);
-        const glow = interpolate(f, [at, at + 16, at + STAT_LEN], [0, 0.35, 0.12], clamp);
         return (
           <AbsoluteFill key={i} style={{ alignItems: "center", justifyContent: "center", opacity: p * o }}>
-            <AbsoluteFill style={{ background: `radial-gradient(700px 420px at 50% 48%, rgba(47,84,235,${glow}), rgba(10,10,10,0) 70%)` }} />
-            <div style={{ transform: `translateY(${up}px) scale(${1.18 - p * 0.18})`, filter: `blur(${(1 - p) * 14}px)`, textAlign: "center" }}>
-              <div style={{ fontFamily: SANS, fontSize: 230, fontWeight: 650, color: C.ink, letterSpacing: "-0.055em", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+            <div style={{ transform: `translateY(${up}px) scale(${1.16 - p * 0.16})`, filter: `blur(${(1 - p) * 14}px)`, textAlign: "center" }}>
+              <div style={{ fontFamily: SANS, fontSize: 250, fontWeight: 640, color: i % 2 ? C.brand : C.ink, letterSpacing: "-0.06em", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                 {st.count ? <CountUp value={st.count[0]} delay={at} duration={26} format={st.count[1]} /> : st.big}
               </div>
-              <div style={{ fontFamily: SANS, fontSize: 48, color: C.ink2, marginTop: 28, letterSpacing: "-0.02em" }}>{st.label}</div>
+              <div style={{ fontFamily: SANS, fontSize: 48, color: C.ink2, marginTop: 30, letterSpacing: "-0.02em" }}>{st.label}</div>
             </div>
           </AbsoluteFill>
         );
       })}
-      <div style={{ position: "absolute", left: 160, right: 160, top: 400, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+      <div style={{ position: "absolute", left: 160, right: 160, top: 400, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 28 }}>
         {STATS.map((st, i) => (
           <Rise key={i} delay={rowAt + i * 5}>
-            <div style={{ borderTop: `2px solid ${i === 0 ? C.brand : "#2a2a2a"}`, paddingTop: 28 }}>
-              <div style={{ fontFamily: SANS, fontSize: 92, fontWeight: 650, color: C.ink, letterSpacing: "-0.05em", lineHeight: 1 }}>{st.big}</div>
+            <div style={{ borderTop: `2px solid ${i === 0 ? C.brand : C.ink}`, paddingTop: 28 }}>
+              <div style={{ fontFamily: SANS, fontSize: 96, fontWeight: 640, color: C.ink, letterSpacing: "-0.05em", lineHeight: 1 }}>{st.big}</div>
               <div style={{ fontFamily: SANS, fontSize: 30, color: C.ink2, marginTop: 18, lineHeight: 1.3 }}>{st.label}</div>
             </div>
           </Rise>
@@ -645,11 +571,11 @@ const Numbers: React.FC = () => {
 // ─────────────────────────────────────────────────────────────
 // Финал 2: стена из настоящих экранов в 3D
 // ─────────────────────────────────────────────────────────────
-const SHOTS = [
-  "today-desktop", "staff-queue", "assistant-desktop", "documents-desktop", "schedule-desktop",
-  "staff-analytics", "request-status-desktop", "sick-leave-desktop", "notifications-desktop", "staff-request",
-  "appointments-desktop", "today-light", "verify-desktop", "staff-student-card", "grades-desktop",
-  "today-en", "certificate-desktop", "staff-retakes", "payments-desktop", "staff-schedule",
+export const SHOTS = [
+  "today", "staff-queue", "assistant", "documents", "schedule",
+  "staff-analytics", "requests", "sick-leave", "notifications", "staff-requests",
+  "appointments", "grades", "profile", "staff-students", "payments",
+  "staff-retakes", "staff-schedule", "staff-announcements", "staff-radar", "staff-appointments",
 ];
 const WALL_LEN = sec(7);
 const Wall: React.FC = () => {
@@ -658,12 +584,12 @@ const Wall: React.FC = () => {
   const cols = 5;
   const w = 520;
   const h = 325;
-  const gap = 26;
+  const gap = 28;
   const scroll = interpolate(f, [0, WALL_LEN], [80, -320], clamp);
   const appear = spring({ frame: f, fps, config: { damping: 200 }, durationInFrames: 40 });
-  const lines = ["11 разделов для студента", "8 для учебного офиса", "Светлая и тёмная тема, RU и EN"];
+  const lines = ["11 разделов для студента", "8 для учебного офиса", "Светлая и тёмная тема, русский и английский"];
   return (
-    <AbsoluteFill style={{ background: C.bg, overflow: "hidden" }}>
+    <AbsoluteFill style={{ background: "#dededa", overflow: "hidden" }}>
       <AbsoluteFill style={{ perspective: 2200, opacity: appear }}>
         <div
           style={{
@@ -683,14 +609,14 @@ const Wall: React.FC = () => {
             return (
               <Img
                 key={s}
-                src={staticFile(`shots/${s}.jpg`)}
-                style={{ width: w, height: h, objectFit: "cover", borderRadius: 14, border: "1px solid #262626", opacity: p, transform: `translateY(${(1 - p) * 60}px)`, boxShadow: "0 30px 60px rgba(0,0,0,0.6)" }}
+                src={staticFile(`shots-light/${s}.jpg`)}
+                style={{ width: w, height: h, objectFit: "cover", borderRadius: 14, border: "1px solid rgba(10,10,10,0.14)", opacity: p, transform: `translateY(${(1 - p) * 60}px)`, boxShadow: "0 30px 70px rgba(22,34,80,0.20)" }}
               />
             );
           })}
         </div>
       </AbsoluteFill>
-      <AbsoluteFill style={{ background: "radial-gradient(900px 520px at 50% 50%, rgba(10,10,10,0.88), rgba(10,10,10,0.35) 70%, rgba(10,10,10,0.15))" }} />
+      <AbsoluteFill style={{ background: "radial-gradient(860px 430px at 50% 50%, rgba(241,241,238,0.97) 30%, rgba(241,241,238,0.7) 62%, rgba(241,241,238,0) 100%)" }} />
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           {lines.map((l, i) => (
@@ -698,12 +624,12 @@ const Wall: React.FC = () => {
               <div
                 style={{
                   fontFamily: SANS,
-                  fontSize: i === 2 ? 44 : 92,
-                  fontWeight: i === 2 ? 500 : 650,
-                  color: i === 2 ? C.ink2 : C.ink,
-                  letterSpacing: "-0.045em",
-                  lineHeight: 1.1,
-                  marginTop: i === 2 ? 30 : 0,
+                  fontSize: i === 2 ? 42 : 100,
+                  fontWeight: i === 2 ? 450 : 630,
+                  color: i === 2 ? C.ink2 : i === 1 ? C.brand : C.ink,
+                  letterSpacing: i === 2 ? "-0.02em" : "-0.05em",
+                  lineHeight: 1.08,
+                  marginTop: i === 2 ? 34 : 0,
                 }}
               >
                 {l}
@@ -720,13 +646,14 @@ const Wall: React.FC = () => {
 // ─────────────────────────────────────────────────────────────
 // Финал 3: как сделано
 // ─────────────────────────────────────────────────────────────
-const BUILT_LEN = sec(7.4);
+const BUILT_LEN = sec(7.6);
+const AGENTS = 37;
 const Built: React.FC = () => {
   const f = useCurrentFrame();
-  const agents = Array.from({ length: 34 }, (_, i) => i);
-  const kind = (i: number) => (i < 2 ? "research" : i < 12 ? "dev" : "qa");
+  const agents = Array.from({ length: AGENTS }, (_, i) => i);
+  const kind = (i: number) => (i < 2 ? "research" : i < 12 ? "dev" : i < 34 ? "qa" : "review");
   const facts: [React.ReactNode, string][] = [
-    [<CountUp key="a" value={34} delay={50} />, "ИИ-агента в работе"],
+    [<CountUp key="a" value={AGENTS} delay={50} />, "ИИ-агентов в работе"],
     [
       <>
         ~<CountUp key="b" value={16} delay={56} /> ч
@@ -739,69 +666,58 @@ const Built: React.FC = () => {
       </>,
       "строк кода, написал ИИ",
     ],
-    [<CountUp key="d" value={79} delay={68} />, "e2e-тестов пройдено"],
+    [<CountUp key="d" value={79} delay={68} />, "e2e-проверок пройдено"],
+  ];
+  const groups: [string, string][] = [
+    ["2", "исследователя"],
+    ["10", "разработчиков разделов"],
+    ["22", "в проверке качества"],
+    ["3", "проверяющих перед сдачей"],
   ];
   return (
     <AbsoluteFill>
-      <Background glowX={30} glowY={45} glow={0.08} />
-      <div style={{ position: "absolute", left: 160, top: 170, width: 1600 }}>
-        <Eyebrow delay={TEXT_IN}>Как сделано</Eyebrow>
-        <Headline size={84} delay={TEXT_IN + 4}>
-          Собрано командой ИИ-агентов
-        </Headline>
+      <Background glowX={40} glowY={42} />
+      <div style={{ position: "absolute", left: 160, top: 130, width: 1600 }}>
+        <Label>Как сделано</Label>
+        <Rise delay={TEXT_IN + 4} y={30}>
+          <div style={{ fontFamily: SANS, fontSize: 104, fontWeight: 620, color: C.ink, letterSpacing: "-0.048em", lineHeight: 1.03, marginTop: 20 }}>
+            Собрано командой <span style={{ color: C.brand }}>ИИ-агентов</span>
+          </div>
+        </Rise>
         <Rise delay={TEXT_IN + 12}>
-          <div style={{ fontFamily: SANS, fontSize: 34, color: C.ink2, marginTop: 26 }}>Claude Code писал код, человек ставил задачи и принимал решения</div>
+          <div style={{ fontFamily: SANS, fontSize: 34, color: C.ink2, marginTop: 26, letterSpacing: "-0.015em" }}>Claude Code писал код, человек ставил задачи и принимал решения</div>
         </Rise>
       </div>
-      <div style={{ position: "absolute", left: 160, top: 400, display: "flex", gap: 12 }}>
+      <div style={{ position: "absolute", left: 160, top: 420, display: "flex", gap: 12 }}>
         {["Claude Code", "Субагенты и Workflow", "Playwright", "DeepSeek V3.2"].map((t, i) => (
           <Chip key={t} delay={TEXT_IN + 16 + i * 4}>
             {t}
           </Chip>
         ))}
       </div>
-      <div style={{ position: "absolute", left: 160, top: 520, display: "grid", gridTemplateColumns: "repeat(17, 52px)", gap: 14 }}>
+      <div style={{ position: "absolute", left: 160, top: 540, display: "grid", gridTemplateColumns: "repeat(19, 50px)", gap: 14 }}>
         {agents.map((i) => {
-          const on = interpolate(f, [24 + i * 1.5, 32 + i * 1.5], [0, 1], clamp);
+          const on = interpolate(f, [24 + i * 1.4, 32 + i * 1.4], [0, 1], clamp);
           const k = kind(i);
-          const color = k === "research" ? "#e8e8e8" : k === "dev" ? C.brand : "#5d76e8";
-          return (
-            <div
-              key={i}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 12,
-                border: `1px solid ${on > 0.5 ? color : "#2a2a2a"}`,
-                background: `rgba(${k === "research" ? "232,232,232" : "47,84,235"},${on * (k === "qa" ? 0.35 : 0.85)})`,
-                transform: `scale(${0.7 + on * 0.3})`,
-              }}
-            />
-          );
+          const fill = k === "research" ? `rgba(10,10,10,${on})` : k === "dev" ? `rgba(47,84,235,${on})` : k === "qa" ? `rgba(47,84,235,${on * 0.32})` : "rgba(47,84,235,0)";
+          const edge = on > 0.5 ? (k === "research" ? C.ink : C.brand) : C.line;
+          return <div key={i} style={{ width: 50, height: 50, borderRadius: 12, border: `${k === "review" ? 2.5 : 1}px solid ${edge}`, background: fill, transform: `scale(${0.7 + on * 0.3})` }} />;
         })}
       </div>
-      <div style={{ position: "absolute", left: 160, top: 660, display: "flex", gap: 34, fontFamily: SANS, fontSize: 26, color: C.ink3 }}>
-        <Rise delay={44}>
-          <span>
-            <span style={{ color: C.ink }}>2</span> исследователя
-          </span>
-        </Rise>
-        <Rise delay={48}>
-          <span>
-            <span style={{ color: C.ink }}>10</span> разработчиков разделов
-          </span>
-        </Rise>
-        <Rise delay={52}>
-          <span>
-            <span style={{ color: C.ink }}>22</span> агента проверки качества
-          </span>
-        </Rise>
+      <div style={{ position: "absolute", left: 160, top: 690, display: "flex", gap: 38, fontFamily: SANS, fontSize: 26, color: C.ink2 }}>
+        {groups.map(([n, t], i) => (
+          <Rise key={t} delay={44 + i * 4}>
+            <span>
+              <span style={{ color: C.ink, fontWeight: 600 }}>{n}</span> {t}
+            </span>
+          </Rise>
+        ))}
       </div>
-      <div style={{ position: "absolute", left: 160, top: 770, width: 1600, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 28 }}>
+      <div style={{ position: "absolute", left: 160, top: 790, width: 1600, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 28 }}>
         {facts.map(([n, l], i) => (
           <Rise key={i} delay={48 + i * 6}>
-            <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: 26 }}>
-              <div style={{ fontFamily: SANS, fontSize: 80, fontWeight: 600, color: C.ink, letterSpacing: "-0.045em", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{n}</div>
+            <div style={{ borderTop: `2px solid ${C.ink}`, paddingTop: 24 }}>
+              <div style={{ fontFamily: SANS, fontSize: 84, fontWeight: 620, color: C.ink, letterSpacing: "-0.045em", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>{n}</div>
               <div style={{ fontFamily: SANS, fontSize: 28, color: C.ink2, marginTop: 16 }}>{l}</div>
             </div>
           </Rise>
@@ -827,33 +743,32 @@ const Final: React.FC = () => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const logo = spring({ frame: f - 6, fps, config: { damping: 16, stiffness: 110 }, durationInFrames: 40 });
-  const glow = interpolate(f, [6, 30, 90], [0, 0.5, 0.22], clamp);
   const q = spring({ frame: f - 50, fps, config: { damping: 200 }, durationInFrames: 30 });
   return (
     <AbsoluteFill>
-      <InkBackdrop dim={0.72} />
-      <AbsoluteFill style={{ background: `radial-gradient(600px 420px at 50% 34%, rgba(47,84,235,${glow}), rgba(10,10,10,0) 70%)` }} />
+      <Background glowX={50} glowY={40} />
       <AbsoluteFill style={{ alignItems: "center" }}>
-        <div style={{ marginTop: 150, transform: `scale(${0.6 + logo * 0.4})`, opacity: Math.min(1, logo * 1.3) }}>
-          <LogoMark size={150} />
+        <div style={{ marginTop: 120, transform: `scale(${0.6 + logo * 0.4})`, opacity: Math.min(1, logo * 1.3) }}>
+          <LogoMark size={140} />
         </div>
-        <Rise delay={20}>
-          <div style={{ marginTop: 44, fontFamily: SANS, fontSize: 64, letterSpacing: "-0.03em", color: C.ink, textAlign: "center" }}>
-            <span style={{ fontWeight: 650 }}>MGIMO</span>
-            <span style={{ fontWeight: 400, color: C.ink2, marginLeft: 12 }}>Hub</span>
+        <Rise delay={20} y={30}>
+          <div style={{ marginTop: 46, fontFamily: SANS, fontSize: 112, fontWeight: 620, letterSpacing: "-0.05em", color: C.ink, textAlign: "center", lineHeight: 1.02 }}>
+            Вся учёба <span style={{ color: C.brand }}>в одном окне</span>
           </div>
         </Rise>
         <Rise delay={30}>
-          <div style={{ marginTop: 18, fontFamily: SANS, fontSize: 40, color: C.ink2, textAlign: "center", letterSpacing: "-0.02em" }}>Вся учёба в одном окне</div>
+          <div style={{ marginTop: 22, fontFamily: SANS, fontSize: 40, letterSpacing: "-0.03em", color: C.ink2, textAlign: "center" }}>
+            <span style={{ fontWeight: 640, color: C.ink }}>MGIMO</span> Hub
+          </div>
         </Rise>
-        <div style={{ marginTop: 70, display: "flex", alignItems: "center", gap: 48, opacity: q, transform: `translateY(${(1 - q) * 30}px)` }}>
-          <div style={{ width: 230, height: 230, padding: 20, borderRadius: 22, background: "#fff", boxShadow: "0 30px 90px rgba(0,0,0,0.6)" }}>
+        <div style={{ marginTop: 64, display: "flex", alignItems: "center", gap: 48, opacity: q, transform: `translateY(${(1 - q) * 30}px)` }}>
+          <div style={{ width: 230, height: 230, padding: 20, borderRadius: 24, background: "#fff", border: "1px solid rgba(10,10,10,0.10)", boxShadow: C.shadowSoft }}>
             <svg width="100%" height="100%" viewBox={`0 0 ${QR.n} ${QR.n}`} shapeRendering="crispEdges">
               <path d={QR.d} fill="#0a0a0a" />
             </svg>
           </div>
           <div>
-            <div style={{ fontFamily: SANS, fontSize: 40, color: C.ink, fontWeight: 620, letterSpacing: "-0.02em" }}>Попробуйте сами</div>
+            <div style={{ fontFamily: SANS, fontSize: 44, color: C.ink, fontWeight: 620, letterSpacing: "-0.03em" }}>Попробуйте сами</div>
             <div style={{ fontFamily: SANS, fontSize: 30, color: C.ink2, marginTop: 14 }}>Наведите камеру телефона на QR</div>
             <div style={{ fontFamily: SANS, fontSize: 28, color: C.ink2, marginTop: 18 }}>
               Вход в одно касание: <span style={{ fontFamily: MONO, color: C.ink }}>student.anna</span>
@@ -869,53 +784,17 @@ const Final: React.FC = () => {
 export function buildScenes(): Scene[] {
   return [
     { id: "problem", frames: PROBLEM_LEN, Component: Problem },
-    beforeAfter(
-      "ba-day",
-      "01 · День",
-      "Где пара и что изменилось",
-      "Расписание в чате группы, о переносе узнаёшь последним",
-      "Главный экран показывает пару, аудиторию и все изменения",
-      "И push на телефон, как только деканат что-то поменял",
-    ),
-    loginScene(),
-    todayScene(),
-    beforeAfter(
-      "ba-cert",
-      "02 · Справка",
-      "Справки и заявления",
-      "Очередь в деканат и непонятно, когда будет готово",
-      "Заявка за минуту, статус на каждом шаге, справка с QR",
-      "Атташе сам заполнит заявку, деканат обработает её в своей очереди",
-    ),
+    chapterCard("ba-day", "01 · День", "Расписание в чате, о переносе узнаёшь последним", "Где пара", "и что изменилось.", "Главный экран показывает пару, аудиторию и все изменения"),
+    dayScene(),
+    chapterCard("ba-cert", "02 · Справка", "Очередь в деканат и «приходите завтра»", "Заявка за минуту.", "Статус на каждом шаге.", "Заявку заполняет Атташе, учебный офис ведёт её в своей очереди"),
     attacheScene(),
     staffScene(),
     resultScene(),
-    beforeAfter(
-      "ba-appointment",
-      "03 · Приём",
-      "Учебный офис",
-      "Живая очередь у кабинета и «приходите завтра»",
-      "Запись на удобное время и талон в телефоне",
-      "Тема, день, свободное время и напоминание в календаре",
-    ),
+    chapterCard("ba-appointment", "03 · Приём", "Живая очередь у кабинета", "Запись на время.", "Талон в телефоне.", "Тема, день, свободное время и напоминание в календаре"),
     appointmentScene(),
-    beforeAfter(
-      "ba-sick",
-      "04 · Больничный",
-      "Если заболели",
-      "Пишешь каждому преподавателю и несёшь справку в деканат",
-      "Одно нажатие: офис в курсе, письмо о переносе пишет Атташе",
-      "Сразу видно, какие пары и контрольные затронуты",
-    ),
+    chapterCard("ba-sick", "04 · Больничный", "Писать каждому преподавателю и нести справку", "Заболели?", "Офис уже в курсе.", "Письмо о переносе контрольной напишет Атташе"),
     sickScene(),
-    beforeAfter(
-      "ba-phone",
-      "05 · Телефон",
-      "В метро и за границей",
-      "Нет сети, расписание не открыть, интерфейс только по-русски",
-      "Приложение на экране телефона, работает без сети",
-      "Русский и английский интерфейс для иностранных студентов",
-    ),
+    chapterCard("ba-phone", "05 · Телефон", "Нет сети, и расписание не открыть", "Всё в кармане.", "Даже без сети.", "Ставится как приложение, есть английский интерфейс"),
     phoneScene(),
     { id: "numbers", frames: NUMBERS_LEN, Component: Numbers },
     { id: "wall", frames: WALL_LEN, Component: Wall },
