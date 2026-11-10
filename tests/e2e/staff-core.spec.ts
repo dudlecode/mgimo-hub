@@ -2,8 +2,8 @@
 // заявки для обработки создаёт сам тест (от имени студента), после теста они удаляются через psql
 // (иначе студент упирается в лимит 15 заявок в час и повторный прогон падает).
 import { execFileSync } from "node:child_process";
-import { expect, test, type Page } from "@playwright/test";
-import { attachConsoleGuard, loginAs, type DemoKey } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { attachConsoleGuard, loginAs, test, type DemoKey } from "./helpers";
 
 const UUID = /^[0-9a-f-]{36}$/;
 const created: string[] = [];

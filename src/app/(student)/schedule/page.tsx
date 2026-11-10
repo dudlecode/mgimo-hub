@@ -82,7 +82,10 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
             <ChevronLeft className="size-5" strokeWidth={1.8} />
           </Link>
           <div className="min-w-[104px] text-center text-[15px] font-semibold tabular">
-            {formatDayMonth(weekStart, locale).split(" ")[0]}-{formatDayMonth(addDays(weekStart, 5), locale)}
+            {/* в одном месяце «9-14 ноября», на стыке месяцев «30 ноября - 5 декабря» */}
+            {mskParts(weekStart).m === mskParts(addDays(weekStart, 5)).m
+              ? `${mskParts(weekStart).d}-${formatDayMonth(addDays(weekStart, 5), locale)}`
+              : `${formatDayMonth(weekStart, locale)} - ${formatDayMonth(addDays(weekStart, 5), locale)}`}
           </div>
           <Link href={href(addDays(weekStart, 7))} className="grid size-9 place-items-center rounded-[8px] text-ink-2 transition-colors hover:bg-surface-2" aria-label={t.nextWeek}>
             <ChevronRight className="size-5" strokeWidth={1.8} />
@@ -97,7 +100,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
       </div>
 
       {/* Полоса дней */}
-      <div className={cn("scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0", weekHasChanges ? "mb-2.5" : "mb-5", view === "week" && "hidden")}>
+      <div className={cn("scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:gap-2 sm:px-0", weekHasChanges ? "mb-2.5" : "mb-5", view === "week" && "hidden")}>
         {visibleDays.map((d) => {
           const isSel = isSameMskDay(d, selected);
           const isToday = isSameMskDay(d, today);
@@ -111,7 +114,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
               scroll={false}
               aria-current={isSel ? "date" : undefined}
               className={cn(
-                "relative flex min-w-[52px] flex-1 flex-col items-center rounded-[10px] border px-2 py-2.5 transition-colors",
+                "relative flex min-w-[46px] flex-1 flex-col items-center rounded-[10px] border px-1.5 py-2.5 transition-colors sm:min-w-[52px] sm:px-2",
                 isSel ? "border-brand bg-brand text-brand-ink" : "border-line bg-surface hover:border-line-strong",
               )}
             >

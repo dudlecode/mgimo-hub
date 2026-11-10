@@ -53,7 +53,7 @@ export function StaffBottomNav() {
   return (
     <>
       {open && <button type="button" aria-label="Закрыть меню" className="fixed inset-0 z-40 bg-ink/20 lg:hidden" onClick={() => setOpenFor(null)} />}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-line bg-bg/95 backdrop-blur-md lg:hidden" aria-label="Меню сотрудника">
+      <nav className="no-print pb-safe fixed inset-x-0 bottom-0 z-50 border-t border-line bg-bg/95 backdrop-blur-md lg:hidden" aria-label="Меню сотрудника">
         {open && (
           <ul id="staff-more" className="mx-auto grid max-w-lg grid-cols-4 gap-1 border-b border-line px-3 py-3">
             {rest.map((it) => {

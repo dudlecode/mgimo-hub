@@ -17,7 +17,7 @@ import { validateRequestFields } from "@/lib/data/requests";
 import { getRequestType, STATUS_META } from "@/lib/requests/catalog";
 import { audit, auditMany, type AuditInput } from "@/lib/audit";
 import { documentNumber, randomVerifyCode } from "@/lib/requests/codes";
-import { pairTimes } from "@/lib/academic";
+import { pairNoAt, pairTimes } from "@/lib/academic";
 import { dayKey, formatDayMonth, mskParts, parseDayKey, WEEKDAYS_SHORT } from "@/lib/time";
 import type { RequestStatus } from "@/db/schema";
 
@@ -252,7 +252,8 @@ export async function changeLessonAction(_prev: StaffActionState, formData: Form
     if (l.prevRoom) Object.assign(patch, { room: l.prevRoom, prevRoom: null });
     if (l.prevStartsAt) {
       const dur = l.endsAt.getTime() - l.startsAt.getTime();
-      Object.assign(patch, { startsAt: l.prevStartsAt, endsAt: new Date(l.prevStartsAt.getTime() + dur), prevStartsAt: null });
+      // вместе со временем возвращаем и номер пары, иначе после возврата остался бы номер перенесённой
+      Object.assign(patch, { startsAt: l.prevStartsAt, endsAt: new Date(l.prevStartsAt.getTime() + dur), prevStartsAt: null, pairNo: pairNoAt(l.prevStartsAt) ?? l.pairNo });
     }
     await db.update(s.lessons).set(patch).where(eq(s.lessons.id, l.id));
     text = lessonText.restored(course, l.startsAt, l.pairNo);
@@ -280,7 +281,13 @@ export async function bulkTakeAction(formData: FormData) {
   for (const id of ids) {
     const req = await getScopedRequest(id).catch(() => null);
     if (!req || req.status !== "submitted") continue;
-    await db.update(s.requests).set({ status: "in_review", assignedStaffId: staff.id, updatedAt: new Date() }).where(and(eq(s.requests.id, id), inArray(s.requests.status, ["submitted"])));
+    const moved = await db
+      .update(s.requests)
+      .set({ status: "in_review", assignedStaffId: staff.id, updatedAt: new Date() })
+      .where(and(eq(s.requests.id, id), inArray(s.requests.status, ["submitted"])))
+      .returning({ id: s.requests.id });
+    // заявку успел взять коллега: второй раз событие и уведомление не пишем
+    if (!moved.length) continue;
     await db.insert(s.requestEvents).values({ requestId: id, status: "in_review", actor: "staff", actorName: `${staff.firstName} ${staff.lastName}` });
     await notify({ userId: req.student.user.id, kind: "request", ...requestText.step("take", getRequestType(req.type)?.title ?? "Заявка", req.number, { certificate: false, paper: false }), link: `/requests/${id}` });
     taken.push({ action: "request.status", entityType: "request", entityId: id, studentId: req.student.id, summary: `Изменён статус заявки ${req.number}: ${STATUS_META.in_review.label.toLowerCase()}` });

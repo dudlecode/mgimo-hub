@@ -20,8 +20,12 @@ const FILTERS = [
   { k: "closed", label: "Закрытые" },
 ];
 
-export default async function StaffRequestsPage({ searchParams }: { searchParams: Promise<{ filter?: string; q?: string }> }) {
-  const { filter = "", q = "" } = await searchParams;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+
+export default async function StaffRequestsPage({ searchParams }: { searchParams: Promise<{ filter?: string | string[]; q?: string | string[] }> }) {
+  const sp = await searchParams;
+  const filter = one(sp.filter);
+  const q = one(sp.q).slice(0, 60);
   const rows = await listScopedRequests({ filter: filter || undefined, q: q || undefined });
   const now = new Date();
   return (
@@ -43,7 +47,7 @@ export default async function StaffRequestsPage({ searchParams }: { searchParams
         {FILTERS.map((f) => (
           <Link
             key={f.k}
-            href={f.k ? `/staff/requests?filter=${f.k}` : "/staff/requests"}
+            href={`/staff/requests${f.k || q ? "?" : ""}${new URLSearchParams({ ...(f.k ? { filter: f.k } : {}), ...(q ? { q } : {}) })}`}
             className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium", filter === f.k ? "border-brand bg-brand text-brand-ink" : "border-line bg-surface text-ink-2 hover:border-line-strong")}
           >
             {f.label}

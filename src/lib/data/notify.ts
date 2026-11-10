@@ -18,6 +18,10 @@ export type NewNotification = {
   important?: boolean;
 };
 
+/** Оценки, здоровье, оплата и сообщения офиса на экран блокировки не выводим: в push только заголовок. */
+const PRIVATE_PUSH_KINDS = new Set<NotificationKind>(["grade", "health", "payment", "system"]);
+const PRIVATE_PUSH_BODY = "Откройте MGIMO Hub, чтобы прочитать.";
+
 export async function notify(items: NewNotification | NewNotification[]) {
   const list = Array.isArray(items) ? items : [items];
   if (!list.length) return;
@@ -27,9 +31,14 @@ export async function notify(items: NewNotification | NewNotification[]) {
     const rows = await db
       .insert(s.notifications)
       .values(list.slice(i, i + 500).map((n) => ({ ...n, link: n.link ?? null, important: n.important ?? false })))
-      .returning({ id: s.notifications.id, userId: s.notifications.userId, title: s.notifications.title, body: s.notifications.body });
+      .returning({ id: s.notifications.id, userId: s.notifications.userId, kind: s.notifications.kind, title: s.notifications.title, body: s.notifications.body });
     // В push только заголовок, короткий текст и путь: открытие отметит уведомление прочитанным
-    if (withPush) for (const r of rows) push.push({ userId: r.userId, payload: { title: r.title, body: r.body, url: `/notifications/${r.id}/open`, tag: r.id } });
+    if (withPush) {
+      for (const r of rows) {
+        const body = PRIVATE_PUSH_KINDS.has(r.kind) ? PRIVATE_PUSH_BODY : r.body;
+        push.push({ userId: r.userId, payload: { title: r.title, body, url: `/notifications/${r.id}/open`, tag: r.id } });
+      }
+    }
   }
   if (push.length) schedulePush(push);
 }

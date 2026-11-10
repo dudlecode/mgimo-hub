@@ -3,15 +3,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { attemptLogin } from "@/lib/auth/login";
+import { isForeignOrigin } from "@/lib/auth/origin";
 import { clientIp, createSession } from "@/lib/auth/session";
 
 const Body = z.object({ login: z.string().min(1).max(64), password: z.string().min(1).max(128) });
 
 export async function POST(req: NextRequest) {
   // Защита от login-CSRF: если запрос пришёл из браузера, Origin должен совпадать с нашим хостом
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (origin && host && new URL(origin).host !== host) return NextResponse.json({ error: "Запрос отклонён" }, { status: 403 });
+  if (isForeignOrigin(req.headers)) return NextResponse.json({ error: "Запрос отклонён" }, { status: 403 });
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Введите логин и пароль" }, { status: 400 });

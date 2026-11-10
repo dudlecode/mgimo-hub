@@ -1,5 +1,5 @@
 // Оболочка кабинета студента: меню, шапка, переключатели, общие страницы ошибок.
-import { defineMessages } from "../define";
+import { defineMessages, pluralRu } from "../define";
 
 export const shellMessages = defineMessages(
   {
@@ -19,7 +19,7 @@ export const shellMessages = defineMessages(
       sickLeave: "Больничный",
       payments: "Оплата обучения",
     },
-    notificationsUnread: (n: number) => `Уведомления: ${n} непрочитанных`,
+    notificationsUnread: (n: number) => `Уведомления: ${n} ${pluralRu(n, "непрочитанное", "непрочитанных", "непрочитанных")}`,
     theme: {
       toLight: "Включить светлую тему",
       toDark: "Включить тёмную тему",

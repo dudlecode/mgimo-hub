@@ -1,9 +1,9 @@
 // Деканат: радар рисков, аналитика, пересдачи и направление у студента.
 // Тесты перезапускаемы на той же базе: цели выбираются по странице, созданное откатывается через БД.
 import { readFileSync } from "node:fs";
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale } from "./helpers";
+import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale, test } from "./helpers";
 
 function databaseUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;

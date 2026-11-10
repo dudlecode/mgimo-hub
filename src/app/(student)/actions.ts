@@ -156,11 +156,22 @@ export async function replyRequestAction(_prev: ReplyState, formData: FormData):
   });
   if (!req || ["completed", "rejected", "cancelled"].includes(req.status)) return { error: t.errClosed };
 
-  const nextStatus = req.status === "needs_info" ? "in_review" : req.status;
-  await db.update(s.requests).set({ status: nextStatus, updatedAt: new Date() }).where(eq(s.requests.id, req.id));
+  // Статус меняем только из «нужны уточнения» и только если сотрудник не успел поменять его сам:
+  // иначе ответ студента откатил бы уже выданную справку или отказ обратно в «на рассмотрении».
+  let reopened = false;
+  if (req.status === "needs_info") {
+    const moved = await db
+      .update(s.requests)
+      .set({ status: "in_review", updatedAt: new Date() })
+      .where(and(eq(s.requests.id, req.id), eq(s.requests.status, "needs_info")))
+      .returning({ id: s.requests.id });
+    reopened = moved.length > 0;
+  } else {
+    await db.update(s.requests).set({ updatedAt: new Date() }).where(eq(s.requests.id, req.id));
+  }
   await db.insert(s.requestEvents).values({
     requestId: req.id,
-    status: req.status === "needs_info" ? "in_review" : null,
+    status: reopened ? "in_review" : null,
     actor: "student",
     actorName: fullName(student),
     message,

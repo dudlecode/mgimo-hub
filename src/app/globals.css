@@ -201,6 +201,26 @@ p {
 .stagger-rows > * {
   animation: row-rise 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+/* Вход страницы и секций. Заливка только «до старта»: после анимации transform не остаётся,
+   поэтому fixed-элементы внутри страницы привязаны к окну, как обычно. */
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.page-enter {
+  animation: page-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+@keyframes section-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.section-rise {
+  animation: section-rise 0.42s cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0s) backwards;
+}
 .stagger-rows > *:nth-child(1) { animation-delay: 0.09s; }
 .stagger-rows > *:nth-child(2) { animation-delay: 0.12s; }
 .stagger-rows > *:nth-child(3) { animation-delay: 0.15s; }
@@ -319,6 +339,7 @@ p {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

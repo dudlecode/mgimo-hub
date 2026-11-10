@@ -22,7 +22,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <LocaleProvider locale="ru">
       <div className="min-h-dvh" lang="ru">
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-line bg-surface-1 px-3 py-4 lg:flex">
+        <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-line bg-surface-1 px-3 py-4 lg:flex">
           <Link href="/staff" className="mb-1 px-2.5">
             <Logo compact />
           </Link>
@@ -47,7 +47,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         </aside>
 
         <div className="lg:pl-[240px]">
-          <header className="sticky top-0 z-30 border-b border-line bg-bg/95 pt-[env(safe-area-inset-top)] backdrop-blur-md lg:hidden">
+          <header className="no-print sticky top-0 z-30 border-b border-line bg-bg/95 pt-[env(safe-area-inset-top)] backdrop-blur-md lg:hidden">
             <div className="flex h-12 items-center justify-between px-4">
               <Link href="/staff" className="flex items-center gap-2">
                 <Logo compact />

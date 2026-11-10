@@ -1,15 +1,8 @@
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
-import { SPRING, TIMING } from "./presets";
-
-/** Мягкий вход страницы при каждой навигации (используется в template.tsx). */
+/**
+ * Мягкий вход страницы при каждой навигации (используется в template.tsx).
+ * Анимация на CSS: HTML с сервера виден сразу, без ожидания JS, и нет расхождений при гидрации.
+ * Системную настройку «меньше движения» учитывает общий блок в globals.css.
+ */
 export function PageTransition({ children }: { children: React.ReactNode }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <>{children}</>;
-  return (
-    <motion.div initial={{ opacity: 0, y: TIMING.pageY }} animate={{ opacity: 1, y: 0 }} transition={SPRING.smooth}>
-      {children}
-    </motion.div>
-  );
+  return <div className="page-enter">{children}</div>;
 }

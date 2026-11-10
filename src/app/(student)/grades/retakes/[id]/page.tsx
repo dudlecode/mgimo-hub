@@ -85,7 +85,7 @@ export default async function RetakeReferralPage({ params }: { params: Promise<{
 
         <header className="relative flex items-start justify-between gap-4 border-b-2 border-[#15296b] pb-4">
           <div className="flex min-w-0 items-center gap-3">
-            <LogoMark size={44} />
+            <LogoMark size={44} paper />
             <div className="min-w-0 leading-tight">
               <div className="font-serif text-[15px] font-semibold text-[#15296b]">MGIMO Hub, цифровой деканат</div>
               <div className="text-[11px] text-[#555]">{faculty.name}</div>

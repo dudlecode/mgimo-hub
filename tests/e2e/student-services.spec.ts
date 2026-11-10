@@ -2,9 +2,9 @@
 // Тесты перезапускаемые на той же базе: созданную заявку отзываем и удаляем из БД (отозванная тоже
 // попадает в лимит 15 заявок в час), цели выбираем по DOM, id из БД не хардкодим.
 import { readFileSync } from "node:fs";
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale } from "./helpers";
+import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale, test } from "./helpers";
 
 const SHOTS = "test-results/shots";
 const MARK = "Проверка E2E";

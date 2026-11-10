@@ -1,14 +1,14 @@
 // Раздел «Уведомления» и «Новости деканата», карточка push-уведомлений и ответы /api/push/*.
 // Тексты самих уведомлений и новостей лежат в БД по-русски и не переводятся.
 import type { NotificationKind } from "@/db/schema";
-import { defineMessages } from "../define";
+import { defineMessages, pluralRu } from "../define";
 
 type PushStatus = "unsupported" | "ios-install" | "server-off" | "denied" | "off" | "on";
 
 export const notificationsMessages = defineMessages(
   {
     title: "Уведомления",
-    unread: (n: number) => `${n} непрочитанных`,
+    unread: (n: number) => `${n} ${pluralRu(n, "непрочитанное", "непрочитанных", "непрочитанных")}`,
     allRead: "Всё прочитано",
     markAll: "Прочитать все",
     tabMine: "Мои",

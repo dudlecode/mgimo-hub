@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db, schema as s } from "@/db/client";
 import { requireStudent } from "@/lib/auth/dal";
 import type { FieldDef, RequestTypeDef } from "@/lib/requests/catalog";
-import { dayKey } from "@/lib/time";
+import { dayKey, parseDayKey } from "@/lib/time";
 
 export async function listMyRequests() {
   const { student } = await requireStudent();
@@ -51,7 +51,7 @@ function fieldSchema(f: FieldDef, allowed: { current: Set<string>; debts: Set<st
         : z.string().refine((v) => v === "" || values.includes(v), "Выберите вариант из списка");
     }
     case "date":
-      return req(z.string().trim()).refine((v) => v === "" || dateRe.test(v), "Укажите дату");
+      return req(z.string().trim()).refine((v) => v === "" || (dateRe.test(v) && parseDayKey(v) !== null), "Укажите дату");
     case "number":
       return req(z.string().trim()).refine((v) => v === "" || (!Number.isNaN(Number(v)) && (f.min === undefined || Number(v) >= f.min) && (f.max === undefined || Number(v) <= f.max)), "Укажите число");
     case "myCourse":

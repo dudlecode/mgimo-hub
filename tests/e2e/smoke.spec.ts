@@ -1,7 +1,7 @@
 // Смоук: каждый аккаунт открывает все пункты своего меню.
 // Страница: статус < 400, без ошибок консоли, без горизонтальной прокрутки на mobile, без длинных тире и стрелок.
-import { expect, test, type Page } from "@playwright/test";
-import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale, type DemoKey, type Locale } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, setLocale, test, type DemoKey, type Locale } from "./helpers";
 
 /** Ссылки всех меню на странице (боковое и нижнее), включая скрытые на текущей ширине. */
 async function menuLinks(page: Page): Promise<string[]> {

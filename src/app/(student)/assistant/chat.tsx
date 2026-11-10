@@ -1,5 +1,6 @@
 "use client";
 
+import { CHAT_STORE_KEY } from "@/lib/assistant/chat-store";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowUp, LoaderCircle, RotateCcw } from "lucide-react";
@@ -13,7 +14,7 @@ import { assistantMessages } from "@/lib/i18n/messages/assistant";
 type Action = { kind: "draft" | "open"; label: string; href: string; summary?: string };
 type Msg = { id: string; role: "user" | "assistant"; content: string; actions?: Action[]; mode?: "ai" | "offline"; error?: boolean };
 
-const STORE_KEY = "mh-chat-v2";
+const STORE_KEY = CHAT_STORE_KEY;
 
 /** Безопасный мини-рендер: **жирный** и списки «- ». Никакого HTML из ответа модели. */
 function RichText({ text }: { text: string }) {
@@ -135,8 +136,11 @@ export function Chat({ firstName, initialQuestion }: { firstName: string; initia
     } catch {
       /* без хранилища: без истории */
     }
-    if (initialQuestion) send(initialQuestion, restored);
-    else setTimeout(() => setMessages(restored), 0);
+    if (initialQuestion) {
+      // вопрос из адреса задаём один раз: без ?q обновление страницы и «Назад» не отправят его снова
+      window.history.replaceState(null, "", window.location.pathname);
+      send(initialQuestion, restored);
+    } else setTimeout(() => setMessages(restored), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {

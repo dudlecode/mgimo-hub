@@ -1,7 +1,7 @@
 // Кабинет студента: вход, оболочка, Сегодня, расписание, учёба, профиль.
 // Только главные сценарии. Тесты, меняющие данные, откатывают изменения и не зависят от точных счётчиков.
-import { expect, request as pwRequest, test, type Page } from "@playwright/test";
-import { attachConsoleGuard, BASE_URL, DEMO, expectCleanText, expectNoHorizontalOverflow, loginAs } from "./helpers";
+import { expect, request as pwRequest, type Page } from "@playwright/test";
+import { attachConsoleGuard, BASE_URL, DEMO, expectCleanText, expectNoHorizontalOverflow, loginAs, test } from "./helpers";
 
 const isMobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 1024;
 

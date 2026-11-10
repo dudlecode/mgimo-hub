@@ -1,5 +1,5 @@
 // Экран «Сегодня»: шапка, ближайшее занятие, дедлайны, сводка по учёбе.
-import { defineMessages, pluralEn } from "../define";
+import { defineMessages, pluralEn, pluralRu } from "../define";
 
 export const todayMessages = defineMessages(
   {
@@ -24,7 +24,7 @@ export const todayMessages = defineMessages(
     debts: (n: number) => `Долгов: ${n}`,
     risky: (n: number) => `В зоне риска: ${n}`,
     allGood: "Всё под контролем",
-    avgHint: (n: number) => `Средний результат по ${n} дисциплинам семестра`,
+    avgHint: (n: number) => `Средний результат по ${n} ${pluralRu(n, "дисциплине", "дисциплинам", "дисциплинам")} семестра`,
     noScores: "Баллы появятся после первых контрольных",
     debt: "долг",
     newsTitle: "Новости деканата",

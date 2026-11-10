@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, type Page } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
 import { Client } from "pg";
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3001";
@@ -12,6 +12,31 @@ export const DEMO = {
   office: { login: "staff.office", password: "Demo-Office-26", role: "staff" },
   meo: { login: "staff.meo", password: "Demo-Meo-26", role: "staff" },
 } as const;
+
+/**
+ * При первой загрузке React присылает готовое содержимое Suspense-границы в скрытом
+ * <div hidden id="S:n"> и убирает его примерно через 300 мс после показа. В это окно элементы
+ * страницы есть в DOM дважды (видимый и скрытый), и строгие локаторы падают с «resolved to 2 elements».
+ * Пользователь дубля не видит, поэтому ждём его исчезновения в тестах, а не правим продукт.
+ */
+export async function waitForStreamedHtml(page: Page) {
+  await page
+    .waitForFunction(() => !document.querySelector('div[hidden][id^="S:"]'), undefined, { timeout: 10_000 })
+    .catch(() => {});
+}
+
+/** test со страницей, у которой goto дожидается конца потоковой отдачи HTML. */
+export const test = base.extend({
+  page: async ({ page }, run) => {
+    const goto = page.goto.bind(page);
+    page.goto = async (url, options) => {
+      const res = await goto(url, options);
+      await waitForStreamedHtml(page);
+      return res;
+    };
+    await run(page);
+  },
+});
 
 export type DemoKey = keyof typeof DEMO;
 export type Locale = "ru" | "en";

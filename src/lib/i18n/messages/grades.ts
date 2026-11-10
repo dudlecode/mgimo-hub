@@ -46,7 +46,7 @@ export const gradesMessages = defineMessages(
     },
     session: {
       debtsTitle: "Задолженности",
-      debtLine: (sem: number, points: number) => `${sem}-й семестр · ${points} баллов · «неуд.»`,
+      debtLine: (sem: number, points: number) => `${sem}-й семестр · ${points} ${Number.isInteger(points) ? pluralRu(points, "балл", "балла", "баллов") : "балла"} · «неуд.»`,
       room: "ауд.",
       inDays: (n: number) => `через ${n} ${pluralRu(n, "день", "дня", "дней")}`,
       board: "Комиссия",

@@ -5,7 +5,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { useMessages } from "@/lib/i18n/client";
 import { paymentsMessages } from "@/lib/i18n/messages/payments";
 
-export default function PaymentsError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function PaymentsError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   const t = useMessages(paymentsMessages);
   useEffect(() => {
     console.error(error);
@@ -20,7 +20,7 @@ export default function PaymentsError({ error, reset }: { error: Error & { diges
         </p>
       )}
       <div className="mt-6 flex gap-2">
-        <Button onClick={reset}>{t.retry}</Button>
+        <Button onClick={() => retry()}>{t.retry}</Button>
         <ButtonLink href="/" variant="secondary">
           {t.home}
         </ButtonLink>

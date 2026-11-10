@@ -5,7 +5,7 @@ import type { TranscriptRow } from "@/lib/data/grades";
 import { getRequestType } from "@/lib/requests/catalog";
 import { displayFields } from "@/lib/requests/display";
 import { CONTROL_LABEL, MARK_LABEL, type Mark } from "@/lib/grades";
-import { formatDateLong, formatDateNumeric, parseDayKey } from "@/lib/time";
+import { dayKey, formatDateLong, formatDateNumeric, parseDayKey } from "@/lib/time";
 import { getSemester } from "@/lib/academic";
 import { LogoMark } from "@/components/logo";
 import { fullName } from "@/lib/utils";
@@ -68,7 +68,7 @@ export function CertificateView({ r, student, group, faculty, transcript, url, q
 
         <header className="relative flex items-start justify-between gap-4 border-b-2 border-[#15296b] pb-4">
           <div className="flex items-center gap-3">
-            <LogoMark size={44} />
+            <LogoMark size={44} paper />
             <div className="leading-tight">
               <div className="font-serif text-[15px] font-semibold text-[#15296b]">{en ? "MGIMO Hub, digital dean’s office" : "MGIMO Hub, цифровой деканат"}</div>
               <div className="text-[11px] text-[#555]">{en ? FACULTY_EN[faculty.id] ?? faculty.name : faculty.name}</div>
@@ -76,7 +76,7 @@ export function CertificateView({ r, student, group, faculty, transcript, url, q
           </div>
           <div className="text-right text-[11px] text-[#555] tabular">
             <div className="whitespace-nowrap">№ {r.documentNo}</div>
-            <div>{en ? issued.toISOString().slice(0, 10) : formatDateNumeric(issued)}</div>
+            <div>{en ? dayKey(issued) : formatDateNumeric(issued)}</div>
           </div>
         </header>
 

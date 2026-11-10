@@ -19,7 +19,10 @@ export type LoginState = { error?: string; login?: string; field?: "login" | "pa
 /** Разрешаем только относительные пути внутри своего раздела (защита от open redirect). */
 function safeNext(next: string | undefined, role: "student" | "staff") {
   const home = role === "staff" ? "/staff" : "/";
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return home;
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return home;
+  // Табуляцию и переводы строк парсер адресов выбрасывает, а «\» читает как «/»:
+  // путь вида «/<TAB>/evil.example» увёл бы после входа на чужой сайт.
+  if (/[\u0000-\u001f\u007f\\]/.test(next)) return home;
   if (next.startsWith("/login")) return home;
   const isStaffPath = next === "/staff" || next.startsWith("/staff/");
   if (role === "staff" ? !isStaffPath : isStaffPath) return home;

@@ -14,6 +14,12 @@ export const PAIRS = [
 
 export type PairNo = (typeof PAIRS)[number]["no"];
 
+/** Номер пары по времени начала; null, если время не совпадает с сеткой звонков. */
+export function pairNoAt(startsAt: Date): PairNo | null {
+  const p = mskParts(startsAt);
+  return PAIRS.find((x) => x.start[0] === p.h && x.start[1] === p.min)?.no ?? null;
+}
+
 export function pairTimes(day: Date, no: number): { startsAt: Date; endsAt: Date } {
   const p = PAIRS.find((x) => x.no === no) ?? PAIRS[0];
   const d = mskParts(day);

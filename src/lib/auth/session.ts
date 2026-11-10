@@ -19,7 +19,7 @@ export function clientIp(h: Headers): string {
   return (h.get("x-real-ip") ?? "local").slice(0, 64);
 }
 
-async function isSecureCookie(): Promise<boolean> {
+export async function isSecureCookie(): Promise<boolean> {
   const mode = process.env.COOKIE_SECURE ?? "auto";
   if (mode === "true") return true;
   if (mode === "false") return false;

@@ -15,7 +15,8 @@
     "test:security": "tsx scripts/security-check.ts",
     "ai:check": "tsx scripts/ai-check.ts",
     "test:e2e": "playwright test",
-    "report": "node scripts/build-report.mjs"
+    "report": "node scripts/build-report.mjs",
+    "readme:images": "node scripts/readme-images.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

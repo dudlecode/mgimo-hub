@@ -1,9 +1,8 @@
 // Черновик сообщения студенту из радара рисков. Только сотрудники, только студенты своей области. Ключ ИИ на сервере.
 import { NextResponse, type NextRequest } from "next/server";
-import { and, count, eq, gte } from "drizzle-orm";
 import { z } from "zod";
-import { db, schema as s } from "@/db/client";
 import { getCurrentSession } from "@/lib/auth/session";
+import { reserveAssistantCall } from "@/lib/assistant/quota";
 import { draftOutreach } from "@/lib/assistant/radar";
 import { audit } from "@/lib/audit";
 
@@ -30,16 +29,13 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 });
 
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(s.assistantUsage)
-    .where(and(eq(s.assistantUsage.userId, session.user.id), gte(s.assistantUsage.createdAt, new Date(Date.now() - WINDOW_MS))));
-  if (n >= LIMIT) return NextResponse.json({ error: "Слишком много запросов подряд, подождите пару минут." }, { status: 429 });
+  // Место в лимите занимаем до вызова модели. Промах тоже засчитан: перебор чужих id упирается в ограничение
+  if ((await reserveAssistantCall(session.user.id, LIMIT, WINDOW_MS)) === null) {
+    return NextResponse.json({ error: "Слишком много запросов подряд, подождите пару минут." }, { status: 429 });
+  }
 
   // Область проверяется в слое данных: студент другого факультета даст null, как и несуществующий
   const result = await draftOutreach(parsed.data.studentId);
-  // Промах тоже засчитываем в лимит, чтобы перебор чужих id упирался в ограничение
-  await db.insert(s.assistantUsage).values({ userId: session.user.id });
   if (!result) return NextResponse.json({ error: "Студент не найден" }, { status: 404 });
   await audit({
     action: "radar.draft",

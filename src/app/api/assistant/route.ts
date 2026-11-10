@@ -1,9 +1,9 @@
 // ИИ-ассистент «Атташе». Ключи ИИ-провайдера живут только здесь, на сервере (переменные окружения).
 import { NextResponse, type NextRequest } from "next/server";
-import { and, count, eq, gte } from "drizzle-orm";
 import { z } from "zod";
-import { db, schema as s } from "@/db/client";
+import { isSameOrigin } from "@/lib/auth/origin";
 import { getCurrentSession } from "@/lib/auth/session";
+import { recordAssistantTokens, reserveAssistantCall } from "@/lib/assistant/quota";
 import { buildAssistantContext } from "@/lib/assistant/context";
 import { askModel, offlineAnswer, type AssistantReply } from "@/lib/assistant/engine";
 import { aiProvider } from "@/lib/assistant/providers";
@@ -25,11 +25,7 @@ export async function POST(req: NextRequest) {
   const locale = await getLocale();
   const t = assistantMessages[locale];
   // CSRF: запрос должен прийти с нашего же сайта
-  const origin = req.headers.get("origin");
-  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
-  if (!origin || !host || new URL(origin).host !== host) {
-    return NextResponse.json({ error: t.apiRejected }, { status: 403 });
-  }
+  if (!isSameOrigin(req.headers)) return NextResponse.json({ error: t.apiRejected }, { status: 403 });
 
   const session = await getCurrentSession();
   if (!session || session.user.role !== "student") return NextResponse.json({ error: t.apiSignIn }, { status: 401 });
@@ -40,11 +36,9 @@ export async function POST(req: NextRequest) {
   const last = messages[messages.length - 1];
   if (last.role !== "user") return NextResponse.json({ error: t.apiBadRequest }, { status: 400 });
 
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(s.assistantUsage)
-    .where(and(eq(s.assistantUsage.userId, session.user.id), gte(s.assistantUsage.createdAt, new Date(Date.now() - WINDOW_MIN * 60_000))));
-  if (n >= LIMIT) {
+  // место в лимите занимаем до вызова модели: пачка параллельных запросов не обходит лимит
+  const usageId = await reserveAssistantCall(session.user.id, LIMIT, WINDOW_MIN * 60_000);
+  if (usageId === null) {
     return NextResponse.json({ error: t.apiTooMany(LIMIT, WINDOW_MIN) }, { status: 429 });
   }
 
@@ -63,6 +57,6 @@ export async function POST(req: NextRequest) {
     answer = offlineAnswer(last.content, ctx, locale);
   }
 
-  await db.insert(s.assistantUsage).values({ userId: session.user.id, tokens: answer.tokens ?? 0 });
+  await recordAssistantTokens(usageId, answer.tokens);
   return NextResponse.json({ ...answer, degraded: fallbackReason !== null }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { mskParts } from "@/lib/time";
 
 // Без похожих символов (0/O, 1/I/L), чтобы код можно было продиктовать или ввести вручную.
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -22,7 +23,7 @@ export function normalizeVerifyCode(input: string): string | null {
 
 /** Исходящий номер документа: 26-МО/01042 */
 export function documentNumber(facultyCode: string, requestNumber: string, at: Date = new Date()): string {
-  const yy = String(at.getUTCFullYear()).slice(2);
+  const yy = String(mskParts(at).y).slice(2);
   const seq = requestNumber.replace(/\D/g, "").slice(-5);
   return `${yy}-${facultyCode}/${seq}`;
 }

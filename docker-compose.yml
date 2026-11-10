@@ -3,6 +3,9 @@
 # Разработка:   docker compose up -d db        (только база на localhost:5433)
 # Продакшн:     docker compose --profile prod up -d --build
 #               (поднимет базу + приложение на :3000, применит миграции и заполнит демо-данными)
+#
+# База по умолчанию слушает только localhost сервера. За Caddy (docker-compose.https.yml)
+# закройте так же и приложение: APP_PORT=127.0.0.1:3000 в .env.
 
 services:
   db:
@@ -13,7 +16,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-attache_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-attache}
     ports:
-      - "${DB_PORT:-5433}:5432"
+      - "${DB_PORT:-127.0.0.1:5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -31,7 +34,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-attache}:${POSTGRES_PASSWORD:-attache_dev_password}@db:5432/${POSTGRES_DB:-attache}
-      AI_PROVIDER: ${AI_PROVIDER:-bedrock}
+      # пусто: провайдер выбирается по тому, какой ключ задан
+      AI_PROVIDER: ${AI_PROVIDER:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       BEDROCK_MODEL_ID: ${BEDROCK_MODEL_ID:-deepseek.v3.2}
       AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
@@ -39,6 +43,7 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      APP_URL: ${APP_URL:-}
       DEMO_MODE: ${DEMO_MODE:-true}
       SEED_ON_START: ${SEED_ON_START:-if-empty}
       COOKIE_SECURE: ${COOKIE_SECURE:-auto}

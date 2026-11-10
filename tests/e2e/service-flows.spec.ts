@@ -1,8 +1,8 @@
 // Запись на приём, больничный и оплата: главные сценарии студента и учебного офиса.
 // Тесты меняют данные, поэтому всё созданное откатывают через psql (docker compose, база attache).
 import { execFileSync } from "node:child_process";
-import { expect, test, type Page } from "@playwright/test";
-import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs } from "./helpers";
+import { expect, type Page } from "@playwright/test";
+import { attachConsoleGuard, expectCleanText, expectNoHorizontalOverflow, loginAs, test } from "./helpers";
 
 const MARK = "e2e-autotest";
 const UUID = /^[0-9a-f-]{36}$/;

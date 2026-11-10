@@ -58,7 +58,9 @@ export function parseDayKey(key: string | undefined | null): Date | null {
   if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
   const [y, m, d] = key.split("-").map(Number);
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
-  return mskDate(y, m - 1, d);
+  const date = mskDate(y, m - 1, d);
+  // 31 ноября и 30 февраля Date молча переносит на следующий месяц: такие строки отбрасываем
+  return dayKey(date) === key ? date : null;
 }
 
 export function isSameMskDay(a: Date, b: Date): boolean {

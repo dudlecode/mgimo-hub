@@ -3,7 +3,7 @@
 import type { AppointmentStatus } from "@/db/schema";
 import { APPOINTMENT_STATUS_LABEL, APPOINTMENT_TOPICS, topicLabel as topicLabelRu, type AppointmentTopic } from "@/lib/appointments";
 import type { Locale } from "../config";
-import { defineMessages } from "../define";
+import { defineMessages, pluralRu } from "../define";
 
 const TOPICS_EN: Record<AppointmentTopic, { label: string; hint: string }> = {
   certificate: { label: "Certificate or transcript", hint: "A paper certificate with a stamp, an archive certificate, a transcript of grades" },
@@ -51,7 +51,7 @@ export const appointmentsMessages = defineMessages(
     hours: "Часы приёма",
     how: "Как это работает",
     howText: (days: number) =>
-      `Запись открыта на ${days} рабочих дней вперёд, не позже чем за час до начала. Можно держать до двух записей одновременно. Справку без визита можно заказать в разделе`,
+      `Запись открыта на ${days} ${pluralRu(days, "рабочий день", "рабочих дня", "рабочих дней")} вперёд, не позже чем за час до начала. Можно держать до двух записей одновременно. Справку без визита можно заказать в разделе`,
     howLink: "«Заявки»",
     upcoming: "Предстоящие записи",
     ticket: "Талон",
